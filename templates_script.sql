@@ -177,36 +177,47 @@ alter view staging.aggregated_sia_actuals_target owner to rt_vama;
 ---This view creates the social mobilization indicators
 --- The link to the template: https://inform.unicef.org/uniceftemplates/635/765
 --- The social mobilization indicators data entails communication activities during or after a campaign.
-create or replace view reporting.social_mobilization_indicators as 
+create or replace view staging.social_mobilization_indicators as 
 (
 with rumors_misinformation as 
 (
 ----This section unnests the select multiple option under Rumors and Misinformation
 select  
  id,
- unnest(array['Vaccine related','Vaccination team','Vaccination campaign']) as indicators,
+ unnest(array['Vaccine related','Vaccination team','Vaccination campaign']) as indicators_category,
  unnest(array[vaccine_related,vaccination_team,vaccination_campaign]) as indicators_value
 from templates.spv_social_mobilization_indicators ssmi 
 ),
 mobilization_indicators as
 (
---This section creates a tidy section of the social mobilization activities such as number of households visited, number of refusals addressed etc.
+--This section creates a tidy section of the social mobilization activities such as number of households visited etc.
 select 
  id,
- unnest(array['Social mobilisers/community volunteers engaged','Households visited','Group meetings/learning sessions with caregivers conducted','Religious institutions visited','Advocacy meetings with community leaders','Posters and banners produced and displayed','Refusals addressed']) as indicators,
- unnest(array[social_mobilisers,hhs_visited,learning_sessions,religious_institutions,advocacy_meetings,posters_banners,refusals_addressed]) as indicators_value
+ unnest(array['Social mobilisers/community volunteers engaged','Households visited','Group meetings/learning sessions with caregivers conducted','Religious institutions visited','Advocacy meetings with community leaders','Posters and banners produced and displayed']) as indicator_category,
+ unnest(array[social_mobilisers,hhs_visited,learning_sessions,religious_institutions,advocacy_meetings,posters_banners]) as indicator_value
 from templates.spv_social_mobilization_indicators ssmi 
 ),
+----This section creates a tidy section of the refusals addressed from the spv_social_mobilization_indicators_refusals repeat group data table
+refusals_addressed as
+(
+select 
+parent_id as id,
+unnest(array['Refusals Addressed']) as indicator_category,
+unnest(array[refusals_addressed]) as indicator_value
+from templates.spv_social_mobilization_indicators_refusals ssmir 
+),
+----This section unions all the subsections above
 combined_indicators as 
 (
 select * from rumors_misinformation
 union all 
 select * from mobilization_indicators
+union all 
+select * from refusals_addressed
 )
 select
   c.id, 
-  ssmi.reporting_date,
-  initcap(replace(vaccine_administered,'_',' ')) as vaccine_administered,
+  ssmi.assessment_date,
   a1.label as admin1,
   a2.label as admin2,
   a3.label as admin3,
@@ -214,7 +225,7 @@ select
   case 
   	when ssmi.conducted_by='others' then conducted_by_other else conducted_by 
   end as conducted_by,  
-  c.indicators,
+  c.indicators_category,
   c.indicators_value
 from combined_indicators c  
 left join templates.spv_social_mobilization_indicators ssmi on c.id=ssmi.id
@@ -224,23 +235,27 @@ left join csv.admin3 a3 on ssmi.admin3=a3.name::text ---Adds admin 3 labels usin
 left join csv.admin4 a4 on ssmi.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 );
 
-alter view reporting.social_mobilization_indicators owner to rt_vama;
+alter view staging.social_mobilization_indicators owner to rt_vama;
 
  -----Synchronized Vaccination Monitoring Tool
 ----Inform link: https://inform.unicef.org/uniceftemplates/635/847
+---This view creates a tidy table of the Synchronized Vaccination Monitoring Tool form
 
 select 
   svmt.id,
-  svmt.reporting_date,
+  svmt.date_vaccination_activity,
   a1.label as admin1,
   a2.label as admin2,
   a3.label as admin3,
   a4.label as admin4,
+  a5.label as admin5,
   svmt.vaccine_label,
-  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature']) as indicators,
-  unnest(array[databoard_targets,hc_microplan,spot_map,population_targets_indicated,social_preparation,dialogues,public_announcements,evidence,specific_activities,teams_trained,daily_itinerary,vaccination_strategy,supervisory_plan,separate_sheet,campaign_forms,mother_child_book,transport_support,response_plan,contigency_plan,schedule_mopups,schedule_rca,feedback_meeting,waste_plan,followup_visits,management_plan,power_supply,generator_solar,vaccine_ref,separate_box,box_properly_labelled,stored_well]) as indicators_value
+  unnest(array[part1_indicator1,part1_indicator2,part1_indicator3,part1_indicator4,part1_indicator5,part1_indicator6,part1_indicator7,part1_indicator8,part1_indicator9,part1_indicator10,part1_indicator11,part1_indicator12,part1_indicator13,part1_indicator14,part1_indicator15,part1_indicator16,part1_indicator17,part1_indicator18,part1_indicator19,part1_indicator20,part1_indicator21,part1_indicator22,part1_indicator23,part1_indicator24,part2_indicator1,part2_indicator2,part2_indicator3,part2_indicator4,part2_indicator5,part2_indicator6,part2_indicator7,part2_indicator8,part2_indicator9,part2_indicator10,part2_indicator11,part2_indicator12,part2_indicator13,part2_indicator14,part2_indicator15,part2_indicator16,part2_indicator17,part2_indicator18,part2_indicator19,part2_indicator20,part2_indicator21,part2_indicator22,part2_indicator23,part2_indicator24,part2_indicator25,part2_indicator26,part2_indicator27,part2_indicator28,part2_indicator29,part2_indicator30]) as indicators_value,
+  unnest(array[part1_indicator1_remarks,part1_indicator2_remarks,part1_indicator3_remarks,part1_indicator4_remarks,part1_indicator5_remarks,part1_indicator6_remarks,part1_indicator7_remarks,part1_indicator8_remarks,part1_indicator9_remarks,part1_indicator10_remarks,part1_indicator11_remarks,part1_indicator12_remarks,part1_indicator13_remarks,part1_indicator14_remarks,part1_indicator15_remarks,part1_indicator16_remarks,part1_indicator17_remarks,part1_indicator18_remarks,part1_indicator19_remarks,part1_indicator20_remarks,part1_indicator21_remarks,part1_indicator22_remarks,part1_indicator23_remarks,part1_indicator24_remarks,part2_indicator1_remarks,part2_indicator2_remarks,part2_indicator3_remarks,part2_indicator4_remarks,part2_indicator5_remarks,part2_indicator6_remarks,part2_indicator7_remarks,part2_indicator8_remarks,part2_indicator9_remarks,part2_indicator10_remarks,part2_indicator11_remarks,part2_indicator12_remarks,part2_indicator13_remarks,part2_indicator14_remarks,part2_indicator14_remarks,part2_indicator15_remarks,part2_indicator16_remarks,part2_indicator17_remarks,part2_indicator18_remarks,part2_indicator19_remarks,part2_indicator20_remarks,part2_indicator21_remarks,part2_indicator22_remarks,part2_indicator23_remarks,part2_indicator24_remarks,part2_indicator25_remarks,part2_indicator26_remarks,part2_indicator27_remarks,part2_indicator28_remarks,part2_indicator29_remarks,part2_indicator30_remarks]) as indicators_remarks,
+  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials']) as indicators_label 
 from templates.synchronized_vaccination_monitoring_tool svmt
 left join csv.admin1 a1 on svmt.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
 left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
