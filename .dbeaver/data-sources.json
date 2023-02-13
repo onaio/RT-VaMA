@@ -1,0 +1,49 @@
+{
+	"folders": {},
+	"connections": {
+		"postgres-jdbc-18649dc5ed3-32b32d8f0683a9a6": {
+			"provider": "postgresql",
+			"driver": "postgres-jdbc",
+			"name": "rt_vama",
+			"save-password": true,
+			"configuration": {
+				"host": "canopy.cngdpnwb7fy5.eu-central-1.rds.amazonaws.com",
+				"port": "5432",
+				"database": "rt_vama",
+				"url": "jdbc:postgresql://canopy.cngdpnwb7fy5.eu-central-1.rds.amazonaws.com:5432/rt_vama",
+				"configurationType": "MANUAL",
+				"home": "postgresql_client",
+				"type": "dev",
+				"provider-properties": {},
+				"auth-model": "native",
+				"handlers": {
+					"ssh_tunnel": {
+						"type": "TUNNEL",
+						"enabled": true,
+						"save-password": true,
+						"properties": {
+							"host": "ah-eu-west.onalabs.org",
+							"port": 22,
+							"authType": "PUBLIC_KEY",
+							"keyPath": "C:\\Users\\User\\Documents\\Important Documents\\joylineprivate_key.ppk",
+							"implementation": "sshj",
+							"localHost": "",
+							"remoteHost": ""
+						}
+					}
+				}
+			}
+		}
+	},
+	"connection-types": {
+		"dev": {
+			"name": "Development",
+			"color": "255,255,255",
+			"description": "Regular development database",
+			"auto-commit": true,
+			"confirm-execute": false,
+			"confirm-data-change": false,
+			"auto-close-transactions": false
+		}
+	}
+}
