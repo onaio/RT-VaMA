@@ -155,9 +155,9 @@ select
  a4.label as admin4,
  a5.label as admin5,
  a.vaccine_administered,
- a.total_vaccinated
- ,
+ a.total_vaccinated,
  t.daily_target,
+ t.campaign_target,
  vd.vials_used,
  vd.vials_discarded,
  vd.vaccine_dose
@@ -173,6 +173,71 @@ left join vaccine_doses vd on vd.date_vaccination_activity=hcd.date and vd.vacci
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
+
+
+create or replace view staging.sia_actuals_target as
+(
+with 
+targets as 
+--Retrieves the campaign target from the targets form, then computes the daily target based on the number of days the campaign is supposed to take.
+--The link to the targets form: https://inform.unicef.org/uniceftemplates/635/977 
+(
+select 
+ siat.id,
+ siat.admin0,
+ siat.admin1,
+ siat.admin2,
+ siat.admin3,
+ siat.admin4,
+ siat.admin5,
+ siat.campaign_start_date,
+ siat.campaign_end_date,
+ siat.vaccine_label,
+ siattc.no_children as campaign_target,
+ siattc.no_children / (siat.campaign_end_date - siat.campaign_start_date) as daily_target,
+ siattc.age_group_label 
+from templates.supplemental_immunization_activity_target siat  
+left join templates.supplemental_immunization_activity_target_target_children siattc on siattc.parent_id=siat.id 
+),
+actuals as 
+---Retrieves the actual values from the vaccination coverage group
+(
+select 
+  sia.date_vaccination_activity,
+  sia.admin1,
+  sia.admin2,
+  sia.admin3,
+  sia.admin4,
+  sia.admin5,
+  sia.vaccine_label as vaccine_administered,
+  SUM(siav.vaccinated_males + siav.vaccinated_females) as total_vaccinated,
+  siav.age_group_label 
+from templates.supplemental_immunization_activity_vaccine siav 
+left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id
+group by 1,2,3,4,5,6,7,9
+)
+select 
+ date,
+ a1.label as admin1,
+ a2.label as admin2,
+ a3.label as admin3,
+ a4.label as admin4,
+ a5.label as admin5,
+ a.vaccine_administered,
+ a.total_vaccinated,
+ t.campaign_target,
+ a.age_group_label 
+from csv.hard_coded_dates hcd 
+left join actuals a on a.date_vaccination_activity=hcd.date
+left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
+left join csv.admin1 a1 on a.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on a.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
+where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
+);
+alter view staging.sia_actuals_target owner to rt_vama;
 
 ---This view creates the social mobilization indicators
 --- The link to the template: https://inform.unicef.org/uniceftemplates/635/765
@@ -271,7 +336,7 @@ left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
 alter view staging.monitoring_tool owner to rt_vama;
 
 ---- Health Center Level Monitoring and Assessment of Readiness
----- Inform link: 
+---- Inform link: https://inform.unicef.org/uniceftemplates/635/761
 ---This view creates a tidy table of the Health Center Level Monitoring and Assessment of Readiness form
 
 create or replace view staging.hcl_monitoring_assessment as 
@@ -287,10 +352,10 @@ a4.label as admin4,
 bg.latitude,
 bg.longitude,
 a5.label as admin5,
-unnest(array[microplan_indicator1,microplan_indicator2,microplan_indicator3,microplan_indicator4,microplan_indicator5,microplan_indicator6,microplan_indicator7,microplan_indicator8,microplan_indicator9,logistics_indicator1,logistics_indicator2,logistics_indicator3,logistics_indicator4,logistics_indicator5,logistics_indicator6,logistics_indicator7,social_mob_indicator1,social_mob_indicator2,social_mob_indicator3,imm_safety_indicator1,imm_safety_indicator2,supervision_indicator1,supervision_indicator2,supervision_indicator3,supervision_indicator4,supervision_indicator5,reporting_indicator1,reporting_indicator2,reporting_indicator3,vacc_mngt_indicator1,vacc_mngt_indicator2,vacc_mngt_indicator3,vacc_mngt_indicator4,hr_indicator1,hr_indicator2::text]) as indicators_value,
-unnest(array[microplan_indicator1_remarks,microplan_indicator2_remarks,microplan_indicator3_remarks,microplan_indicator4_remarks,microplan_indicator5_remarks,microplan_indicator6_remarks,microplan_indicator7_remarks,microplan_indicator8_remarks,microplan_indicator9_remarks,logistics_indicator1_remarks,logistics_indicator2_remarks,logistics_indicator3_remarks,logistics_indicator4_remarks,logistics_indicator5_remarks,logistics_indicator6_remarks,logistics_indicator7_remarks,social_mob_indicator1_remarks,social_mob_indicator2_remarks,social_mob_indicator3_remarks,imm_safety_indicator1_remarks,imm_safety_indicator2_remarks,supervision_indicator1_remarks ,supervision_indicator2_remarks,supervision_indicator3_remarks,supervision_indicator4_remarks,supervision_indicator5_remarks,reporting_indicator1_remarks,reporting_indicator2_remarks,reporting_indicator3_remarks,vacc_mngt_indicator1_remarks,vacc_mngt_indicator2_remarks,vacc_mngt_indicator3_remarks,vacc_mngt_indicator4_remarks,hr_indicator1_remarks::text,hr_indicator2_remarks]) as indicators_remarks,
-unnest(array['Inclusion of all areas in the health center microplan','List of all transit and congregation points,markets and religious gathering','Reach of high-risk population plan','Teams daily activity plans','Special strategies planned','Maps show catchment areas','Completion of logistcs and other resource estimations','List of local influencers and contact details','Vaccine and waste management plan','Cold chain capacity and contigency plans for vaccine sufficiently functional','Availability of adequate quantity of vaccines','Availability of adequate quantity of vaccination essentials(eg. vaccine carries,ice packs)','Availability of face masks and hand hygiene','Other logistics received','Logistics transport available to supply all areas','Contigency plan in place for replenishment','Engagement of leader for campaign announcements','Display of promotion materials in conspicuous places','Community awareness of vaccination dates and venues','Superisors knowledge on AEFI report','Availability of AEFI investigation forms and SOPs','Availability of monitoring and supervision plan','Supervisors traained for conduction team monitoringand RCMs','Availability of required checklists and templates','Mop ups system in areas with un-immunized children','Daily monitoring of coverage data and feedback system available','Daily collection and consolidation of tally sheets system available','Mechanism in place for sbmission of reports','ODK orientation conducted','Logistics focal point assiged and trained on vaccine management','Vaccine separate space allocation and clear labelling in refrigerator','Availability of required recording and reporting templates','Vaccine recall,accuntability,collection,handover and reporting system in place','Adequate number of vaccinators and recorders','Number of records']) as indicators_label,
-unnest(array['Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Social Mobilization','Social Mobilization','Social Mobilization','Immunization Safety','Immunization Safety','Supervision and Monitoring','Supervision and Monitoring','Supervision and Monitoring','Supervision and Monitoring','supervision and Monitoring','Reporting System','Reporting System','Reporting System','Vaccine Management','Vaccine Management','Vaccine Management','Vaccine Management','Human Resource','Human Resource']) as indicators_category
+unnest(array[microplan_indicator1,microplan_indicator2,microplan_indicator3,microplan_indicator4,microplan_indicator5,microplan_indicator6,microplan_indicator7,microplan_indicator8,microplan_indicator9,logistics_indicator1,logistics_indicator2,logistics_indicator3,logistics_indicator4,logistics_indicator5,logistics_indicator6,logistics_indicator7,social_mob_indicator1,social_mob_indicator2,social_mob_indicator3,imm_safety_indicator1,imm_safety_indicator2,supervision_indicator1,supervision_indicator2,supervision_indicator3,supervision_indicator4,supervision_indicator5,reporting_indicator1,reporting_indicator2,reporting_indicator3,vacc_mngt_indicator1,vacc_mngt_indicator2,vacc_mngt_indicator3,vacc_mngt_indicator4,hr_indicator1]) as indicators_value,
+unnest(array[microplan_indicator1_remarks,microplan_indicator2_remarks,microplan_indicator3_remarks,microplan_indicator4_remarks,microplan_indicator5_remarks,microplan_indicator6_remarks,microplan_indicator7_remarks,microplan_indicator8_remarks,microplan_indicator9_remarks,logistics_indicator1_remarks,logistics_indicator2_remarks,logistics_indicator3_remarks,logistics_indicator4_remarks,logistics_indicator5_remarks,logistics_indicator6_remarks,logistics_indicator7_remarks,social_mob_indicator1_remarks,social_mob_indicator2_remarks,social_mob_indicator3_remarks,imm_safety_indicator1_remarks,imm_safety_indicator2_remarks,supervision_indicator1_remarks ,supervision_indicator2_remarks,supervision_indicator3_remarks,supervision_indicator4_remarks,supervision_indicator5_remarks,reporting_indicator1_remarks,reporting_indicator2_remarks,reporting_indicator3_remarks,vacc_mngt_indicator1_remarks,vacc_mngt_indicator2_remarks,vacc_mngt_indicator3_remarks,vacc_mngt_indicator4_remarks,hr_indicator2_remarks]) as indicators_remarks,
+unnest(array['Inclusion of all areas in the health center microplan','List of all transit and congregation points,markets and religious gathering available','A plan to reach high-risk populations included','Daily activity plans for the teams are available','Special strategies clearly planned','Maps show catchment areas','Logistics and other resource estimations are complete','List of local influencers and contact details available','Vaccine and waste management plan in place','Cold chain capacity and contigency plans for vaccine storage available','Availability of adequate quantity of vaccines','Availability of adequate quantity of vaccination essentials(eg. vaccine carries,ice packs)',' Face mask and hand hygiene available','Other logistics received (finger markers etc)','Logistics transport available to supply all areas','Contigency plan in place for replenishment when stocks run low','Engagement of leaders/officials for campaign announcements and meetings confirmed','Display of promotion materials in conspicuous places','Community aware about the assigned date and venue of vaccination sessions','Supervisors know how to report AEFI and communicate risk in case of AEFIs','AEFI investigation forms and SOPs available with supervisors','Monitoring and supervision plan available','Supervisors trained for conducting team monitoring and RCMs','Required checklists and templates available','Mop-up system in place in areas with un-immunized/missed children after RCA','Daily monitoring of coverage data and feedback system available','Daily collection and consolidation of tally sheets system available','Mechanism in place for submission of reports','ODK orientation conducted','Logistics focal point assigned and trained on vaccine management','Separate space allocation for vaccine and clear labelling in refrigerator','Required recording and reporting templates available','System in place for vaccine recall,accuntability,collection,handover and reporting','Adequate number of vaccinators and recorders']) as indicators_label,
+unnest(array['Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Microplan','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Logistics Supply','Social Mobilization','Social Mobilization','Social Mobilization','Immunization Safety','Immunization Safety','Supervision and Monitoring','Supervision and Monitoring','Supervision and Monitoring','Supervision and Monitoring','Supervision and Monitoring','Reporting System','Reporting System','Reporting System','Vaccine Management','Vaccine Management','Vaccine Management','Vaccine Management','Human Resource']) as indicators_category
 from templates.health_center_level_monitoring_and_assessment_of_readiness hcl 
 left join csv.admin1 a1 on hcl.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on hcl.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
