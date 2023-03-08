@@ -226,7 +226,9 @@ select
  a.vaccine_administered,
  a.total_vaccinated,
  t.campaign_target,
- a.age_group_label 
+ a.age_group_label,
+ bg.latitude,
+ bg.longitude
 from csv.hard_coded_dates hcd 
 left join actuals a on a.date_vaccination_activity=hcd.date
 left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
@@ -235,9 +237,43 @@ left join csv.admin2 a2 on a.admin2=a2.name::text ---Adds admin 2 labels using t
 left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
+left join csv.barangay_gps bg on a.admin4=bg.barangay_code::text
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 alter view staging.sia_actuals_target owner to rt_vama;
+
+
+----Reasons breakdown
+create or replace view staging.deferred_refused_reasons as 
+(
+with deferred_refused_reasons as 
+(
+select 
+  siav.parent_id as submission_id,
+  sia.date_vaccination_activity,
+  a1.label as admin1,
+  a2.label as admin2,
+  a3.label as admin3,
+  a4.label as admin4,
+  a5.label as admin5,
+  sia.vaccine_label as vaccine_administered,
+  siav.age_group_label,
+  unnest(array['Reason 1','Reason 2','Reason 3','Reason 4','Reason 5','Reason 6', 'Reason 7','Reason 8','Reason 9', 'Reason 10','Reason 11','Reason 12','Other','Reason 1','Reason 2','Reason 3','Reason 4','Reason 5','Reason 6','Reason 7','Reason 8','Reason 9','Reason 10','Reason 11','Reason 12','Other']) as reason_category,
+  unnest(array[deferred_reason_1,deferred_reason_2,deferred_reason_3,deferred_reason_4,deferred_reason_5,deferred_reason_6,deferred_reason_7,deferred_reason_8,deferred_reason_9,deferred_reason_10,deferred_reason_11,deferred_reason_12,deferred_other,refused_reason_1,refused_reason_2,refused_reason_3,refused_reason_4,refused_reason_5,refused_reason_6,refused_reason_7,refused_reason_8,refused_reason_9,refused_reason_10,refused_reason_11,refused_reason_12,refused_other]) as reasons_value,
+  unnest(array['Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused']) as coverage_category
+from templates.supplemental_immunization_activity_vaccine siav
+left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id  --- Adds the fields assosciated with the repeat group data
+left join csv.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+)
+select * from deferred_refused_reasons
+where reasons_value is not null
+);
+
+alter view staging.deferred_refused_reasons owner to rt_vama;
 
 ---This view creates the social mobilization indicators
 --- The link to the template: https://inform.unicef.org/uniceftemplates/635/765
