@@ -155,12 +155,14 @@ select
  a4.label as admin4,
  a5.label as admin5,
  a.vaccine_administered,
- a.total_vaccinated,
- t.daily_target,
- t.campaign_target,
+ SUM(a.total_vaccinated) as total_vaccinated,
+ --t.daily_target,
+ SUM(t.campaign_target) as campaign_target,
  vd.vials_used,
  vd.vials_discarded,
  vd.vaccine_dose
+ ,
+ vd.vial_dosage
 from csv.hard_coded_dates hcd 
 left join actuals a on a.date_vaccination_activity=hcd.date
 left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
@@ -171,6 +173,7 @@ left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using t
 left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
 left join vaccine_doses vd on vd.date_vaccination_activity=hcd.date and vd.vaccine_label=a.vaccine_administered and a.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
+group by 1,2,3,4,5,6,7,10,11,12,13
 );
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
 
@@ -228,7 +231,8 @@ select
  t.campaign_target,
  a.age_group_label,
  bg.latitude,
- bg.longitude
+ bg.longitude,
+ iso2_code
 from csv.hard_coded_dates hcd 
 left join actuals a on a.date_vaccination_activity=hcd.date
 left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
@@ -238,6 +242,7 @@ left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using t
 left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
 left join csv.barangay_gps bg on a.admin4=bg.barangay_code::text
+left join csv.province_iso2_codes pic  on pic.admin2_id::text=a.admin2
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 alter view staging.sia_actuals_target owner to rt_vama;
