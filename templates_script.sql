@@ -178,6 +178,7 @@ group by 1,2,3,4,5,6,7,10,11,12,13
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
 
 
+---This view combines data from the sia and sia_targets form
 create or replace view staging.sia_actuals_target as
 (
 with 
@@ -248,7 +249,7 @@ where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filt
 alter view staging.sia_actuals_target owner to rt_vama;
 
 
-----Reasons breakdown
+----SIA reasons breakdown
 create or replace view staging.deferred_refused_reasons as 
 (
 with deferred_refused_reasons as 
@@ -360,11 +361,8 @@ select
   a5.label as admin5,
   svmt.vaccine_label,
   unnest(array[part1_indicator1,part1_indicator2,part1_indicator3,part1_indicator4,part1_indicator5,part1_indicator6,part1_indicator7,part1_indicator8,part1_indicator9,part1_indicator10,part1_indicator11,part1_indicator12,part1_indicator13,part1_indicator14,part1_indicator15,part1_indicator16,part1_indicator17,part1_indicator18,part1_indicator19,part1_indicator20,part1_indicator21,part1_indicator22,part1_indicator23,part1_indicator24,part2_indicator1,part2_indicator2,part2_indicator3,part2_indicator4,part2_indicator5,part2_indicator6,part2_indicator7,part2_indicator8,part2_indicator9,part2_indicator10,part2_indicator11,part2_indicator12,part2_indicator13,part2_indicator14,part2_indicator15,part2_indicator16,part2_indicator17,part2_indicator18,part2_indicator19,part2_indicator20,part2_indicator21,part2_indicator22,part2_indicator23,part2_indicator24,part2_indicator25,part2_indicator26,part2_indicator27,part2_indicator28,part2_indicator29,part2_indicator30]) as indicators_value,
-  --]) as indicators_value,
   unnest(array[part1_indicator1_remarks,part1_indicator2_remarks,part1_indicator3_remarks,part1_indicator4_remarks,part1_indicator5_remarks,part1_indicator6_remarks,part1_indicator7_remarks,part1_indicator8_remarks,part1_indicator9_remarks,part1_indicator10_remarks,part1_indicator11_remarks,part1_indicator12_remarks,part1_indicator13_remarks,part1_indicator14_remarks,part1_indicator15_remarks,part1_indicator16_remarks,part1_indicator17_remarks,part1_indicator18_remarks,part1_indicator19_remarks,part1_indicator20_remarks,part1_indicator21_remarks,part1_indicator22_remarks,part1_indicator23_remarks,part1_indicator24_remarks,part2_indicator1_remarks,part2_indicator2_remarks,part2_indicator3_remarks,part2_indicator4_remarks,part2_indicator5_remarks,part2_indicator6_remarks,part2_indicator7_remarks,part2_indicator8_remarks,part2_indicator9_remarks,part2_indicator10_remarks,part2_indicator11_remarks,part2_indicator12_remarks,part2_indicator13_remarks,part2_indicator14_remarks,part2_indicator15_remarks,part2_indicator16_remarks,part2_indicator17_remarks,part2_indicator18_remarks,part2_indicator19_remarks,part2_indicator20_remarks,part2_indicator21_remarks,part2_indicator22_remarks,part2_indicator23_remarks,part2_indicator24_remarks,part2_indicator25_remarks,part2_indicator26_remarks,part2_indicator27_remarks,part2_indicator28_remarks,part2_indicator29_remarks,part2_indicator30_remarks]) as indicators_remarks,
-  --]) as indicators_remarks,
-  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials']) as indicators_label
-  --]) as indicators_label 
+  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials']) as indicators_label 
 from templates.synchronized_vaccination_monitoring_tool svmt
 left join csv.admin1 a1 on svmt.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
@@ -411,7 +409,7 @@ left join csv.hc_assessment_questions_per_category haqpc on ha.indicators_catego
 ;
 alter view staging.hcl_monitoring_assessment owner to rt_vama;
 
-----This query calculates the facilities which are ready for the campaign
+----This query creates a view that calculates the facilities which are ready for the campaign
 create or replace view staging.ready_facilities as 
 with hc_assessment as 
 (
@@ -487,3 +485,174 @@ from prop
 group by 1,2,3,4,5,6,7;
 
 alter view staging.ready_facilities owner to rt_vama;
+
+
+
+-----Rapid Convenience Assessment
+--The link to the template:https://inform.unicef.org/uniceftemplates/635/762
+
+---Labels view
+--- When pulling data from Inform, the connector separates the labels from the actual values by creating separate tables. Labels are normally defined on the choices worksheet of the XLSForm
+--- This view extracts labels from the registry table for the RCA form
+create or replace view staging.rca_labels as 
+(
+-- Extract the json column we want, limit by 1 row since the data has a row for each filled record.
+with dd as
+(
+select 
+json -> 'xform:choices' as data 
+from templates.registry
+where uri = 'spv_rapid_coverage_assessment_form?t=json&v=202301251254'
+limit 1
+), 
+-- Strip down the json to the columns we want, question and label details (this includes the language(s) in the form).
+unnest_1 as (
+select 
+js.key as question, 
+js.value as label_details
+from dd, jsonb_each(dd.data) as js
+), 
+-- Strip down the json further this time getting the code (name column in the xlsform)
+unnest_2 as (
+select unnest_1.question, 
+js1.key as code, js1.value as language
+from unnest_1, jsonb_each(unnest_1.label_details) as js1
+)
+-- Since the data has a slash(/) sperator for the choices question, we are reversing the order then get the first object before the first slash then reverse it back.
+select 
+    reverse(split_part(reverse(unnest_2.question), '/', 1)) question,
+    unnest_2.code,
+    -- Since languages are dynamic,we add this manually for each of the languages used ("und" is when no language has been specified on the form)
+    unnest_2.language ->> 'und' AS label
+from unnest_2
+);
+alter view staging.rca_labels owner to rt_vama;
+
+----Tidy table
+--This query creates a tidy table of the RCA form actual values ie children present in the hh, vaccinated children and not vaccinated children
+create or replace view staging.rca_actuals as
+(
+select 
+  srcafv.parent_id as submission_id,
+  srcaf.rca_date,
+  a1.label as admin1,
+  a2.label as admin2,
+  a3.label as admin3,
+  a4.label as admin4,
+  bg.latitude,
+  bg.longitude,
+  a5.label as admin5,
+  rl.label as vaccine_administered,
+  srcafv.age_group_label,
+  unnest(array['Present in hh','Present in hh','Vaccinated','Vaccinated','Not vaccinated','Not vaccinated']) as rca_category,
+  unnest(array['Males','Females','Males','Females','Males','Females']) as indicator_category,
+  unnest(array[present_males,present_females,vaccinated_males,vaccinated_females,not_vaccinated_males,not_vaccinated_females]) as indicator_value
+from templates.spv_rapid_coverage_assessment_form_vaccination srcafv 
+left join templates.spv_rapid_coverage_assessment_form srcaf  on srcafv.parent_id=srcaf.id  --- Adds the fields assosciated with the repeat group data
+left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on srcaf.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on srcaf.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on srcaf.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on srcaf.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join csv.barangay_gps bg on srcaf.admin4=bg.barangay_code::text
+left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.question='vaccine_administered'
+);
+
+alter view staging.rca_actuals owner to rt_vama;
+
+
+----This query creates a view that has the no.of doors visited, whether mop-up is needed data 
+create or replace view staging.rca as
+(
+select 
+  srcaf.id as submission_id,
+  srcaf.rca_date,
+  a1.label as admin1,
+  a2.label as admin2,
+  a3.label as admin3,
+  a4.label as admin4,
+  bg.latitude,
+  bg.longitude,
+  a5.label as admin5,
+  rl.label as vaccine_administered,
+  srcaf.doors_visited,
+  rca_mop_up,
+  rl1.label as conducted_by
+from templates.spv_rapid_coverage_assessment_form srcaf 
+left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on srcaf.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on srcaf.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on srcaf.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on srcaf.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join csv.barangay_gps bg on srcaf.admin4=bg.barangay_code::text
+left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.question='vaccine_administered'
+left join staging.rca_labels rl1 on rl1.code=srcaf.conducted_by and rl1.question='conducted_by'
+);
+alter view staging.rca owner to rt_vama;
+
+----This query creates a view of the RCA sources of information
+create or replace view staging.rca_sources_info as
+(
+with sources_info as 
+(
+select 
+  srcaf.id as submission_id,
+  srcaf.rca_date,
+  a1.label as admin1,
+  a2.label as admin2,
+  a3.label as admin3,
+  a4.label as admin4,
+  bg.latitude,
+  bg.longitude,
+  a5.label as admin5,
+  rl.label as vaccine_administered,
+  unnest(array['Radio','Tv','Flyers','Other sources of information','Streamer/Tarpaulin','Officials','Social media','Health workers','Relatives/Neighbours']) as sources_info,
+  unnest(array[radio,tv,flyers,"others",streamer,officials,social_media,health_workers,relatives_neighbours]) as no_doors
+from templates.spv_rapid_coverage_assessment_form srcaf 
+left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on srcaf.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on srcaf.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on srcaf.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on srcaf.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join csv.barangay_gps bg on srcaf.admin4=bg.barangay_code::text
+left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.question='vaccine_administered'
+)
+select * from sources_info
+where no_doors is not null
+);
+
+alter view staging.rca_sources_info owner to rt_vama;
+
+----RCA reasons not vaccinated breakdown
+create or replace view staging.rca_not_vaccinated_reasons as
+(
+with reasons_breakdown as 
+(
+select 
+  srcafv.parent_id as submission_id,
+  srcaf.rca_date,
+  a1.label as admin1,
+  a2.label as admin2,
+  a3.label as admin3,
+  a4.label as admin4,
+  bg.latitude,
+  bg.longitude,
+  a5.label as admin5,
+  rl.label as vaccine_administered,
+  unnest(array['Reason 1','Reason 2','Reason 3','Reason 4','Reason 5','Reason 6','Reason 7','Reason 8','Reason 9','Reason 10','Other']) as reasons,
+  unnest(array[reason_1,reason_2,reason_3,reason_4,reason_5,reason_6,reason_7,reason_8,reason_9,reason_10,other_reasons]) as reasons_value
+from templates.spv_rapid_coverage_assessment_form_vaccination srcafv 
+left join templates.spv_rapid_coverage_assessment_form srcaf on srcaf.id=srcafv.parent_id
+left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on srcaf.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on srcaf.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on srcaf.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on srcaf.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join csv.barangay_gps bg on srcaf.admin4=bg.barangay_code::text
+left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.question='vaccine_administered'
+)
+select * from reasons_breakdown
+where reasons_value is not null
+);
+
+alter view staging.rca_not_vaccinated_reasons owner to rt_vama;
