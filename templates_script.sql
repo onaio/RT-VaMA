@@ -178,7 +178,6 @@ group by 1,2,3,4,5,6,7,10,11,12,13
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
 
 
----This view combines data from the sia and sia_targets form
 create or replace view staging.sia_actuals_target as
 (
 with 
@@ -215,10 +214,14 @@ select
   sia.admin5,
   sia.vaccine_label as vaccine_administered,
   SUM(siav.vaccinated_males + siav.vaccinated_females) as total_vaccinated,
+  SUM(siav.deferred_males + siav.deferred_females) as total_deferred,
+  SUM(siav.refused_males+ siav.refused_females) as total_refused,
+  SUM(siav.vaccinated_males_previously_deferred + siav.vaccinated_females_previously_deferred) as total_vaccinated_previously_deferred,
+  SUM(siav.vaccinated_males_previously_refused + siav.vaccinated_females_previously_refused) as total_vaccinated_previously_refused,
   siav.age_group_label 
 from templates.supplemental_immunization_activity_vaccine siav 
 left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id
-group by 1,2,3,4,5,6,7,9
+group by 1,2,3,4,5,6,7,13
 )
 select 
  date,
@@ -233,10 +236,14 @@ select
  a.age_group_label,
  bg.latitude,
  bg.longitude,
- iso2_code
+ pic.iso2_code,
+ a.total_deferred,
+ a.total_refused,
+ a.total_vaccinated_previously_deferred,
+ a. total_vaccinated_previously_refused
 from csv.hard_coded_dates hcd 
 left join actuals a on a.date_vaccination_activity=hcd.date
-left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
+left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.admin5=t.admin5 and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date  
 left join csv.admin1 a1 on a.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on a.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
 left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
@@ -247,6 +254,7 @@ left join csv.province_iso2_codes pic  on pic.admin2_id::text=a.admin2
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 alter view staging.sia_actuals_target owner to rt_vama;
+
 
 
 ----SIA reasons breakdown
@@ -309,7 +317,7 @@ refusals_addressed as
 (
 select 
 parent_id as id,
-unnest(array['Refusals Addressed']) as indicator_category,
+unnest(array['Refusals addressed']) as indicator_category,
 unnest(array[refusals_addressed]) as indicator_value
 from templates.spv_social_mobilization_indicators_refusals ssmir 
 ),
@@ -333,13 +341,15 @@ select
   	when ssmi.conducted_by='others' then conducted_by_other else conducted_by 
   end as conducted_by,  
   c.indicators_category,
-  c.indicators_value
+  c.indicators_value,
+  ssmir.vaccine_label as vaccine_administered 
 from combined_indicators c  
 left join templates.spv_social_mobilization_indicators ssmi on c.id=ssmi.id
 left join csv.admin1 a1 on ssmi.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on ssmi.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
 left join csv.admin3 a3 on ssmi.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on ssmi.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join templates.spv_social_mobilization_indicators_refusals ssmir on ssmir.parent_id=c.id
 );
 
 alter view staging.social_mobilization_indicators owner to rt_vama;
@@ -347,10 +357,36 @@ alter view staging.social_mobilization_indicators owner to rt_vama;
  -----Synchronized Vaccination Monitoring Tool
 ----Inform link: https://inform.unicef.org/uniceftemplates/635/847
 ---This view creates a tidy table of the Synchronized Vaccination Monitoring Tool form
-create or replace view staging.monitoring_tool as 
+create or replace view staging.monitoring_tool as
+(
+with microplan_vaccine_management as
 (
 select 
   svmt.id,
+  unnest(array[part1_indicator1,part1_indicator2,part1_indicator3,part1_indicator4,part1_indicator5,part1_indicator6,part1_indicator7,part1_indicator8,part1_indicator9,part1_indicator10,part1_indicator11,part1_indicator12,part1_indicator13,part1_indicator14,part1_indicator15,part1_indicator16,part1_indicator17,part1_indicator18,part1_indicator19,part1_indicator20,part1_indicator21,part1_indicator22,part1_indicator23,part1_indicator24,part2_indicator1,part2_indicator2,part2_indicator3,part2_indicator4,part2_indicator5,part2_indicator6,part2_indicator7,part2_indicator8,part2_indicator9,part2_indicator10,part2_indicator11,part2_indicator12,part2_indicator13,part2_indicator14,part2_indicator15,part2_indicator16,part2_indicator17,part2_indicator18,part2_indicator19,part2_indicator20,part2_indicator21,part2_indicator22,part2_indicator23,part2_indicator24,part2_indicator25,part2_indicator26,part2_indicator27,part2_indicator28,part2_indicator29,part2_indicator30]) as indicators_value,
+  unnest(array[part1_indicator1_remarks,part1_indicator2_remarks,part1_indicator3_remarks,part1_indicator4_remarks,part1_indicator5_remarks,part1_indicator6_remarks,part1_indicator7_remarks,part1_indicator8_remarks,part1_indicator9_remarks,part1_indicator10_remarks,part1_indicator11_remarks,part1_indicator12_remarks,part1_indicator13_remarks,part1_indicator14_remarks,part1_indicator15_remarks,part1_indicator16_remarks,part1_indicator17_remarks,part1_indicator18_remarks,part1_indicator19_remarks,part1_indicator20_remarks,part1_indicator21_remarks,part1_indicator22_remarks,part1_indicator23_remarks,part1_indicator24_remarks,part2_indicator1_remarks,part2_indicator2_remarks,part2_indicator3_remarks,part2_indicator4_remarks,part2_indicator5_remarks,part2_indicator6_remarks,part2_indicator7_remarks,part2_indicator8_remarks,part2_indicator9_remarks,part2_indicator10_remarks,part2_indicator11_remarks,part2_indicator12_remarks,part2_indicator13_remarks,part2_indicator14_remarks,part2_indicator15_remarks,part2_indicator16_remarks,part2_indicator17_remarks,part2_indicator18_remarks,part2_indicator19_remarks,part2_indicator20_remarks,part2_indicator21_remarks,part2_indicator22_remarks,part2_indicator23_remarks,part2_indicator24_remarks,part2_indicator25_remarks,part2_indicator26_remarks,part2_indicator27_remarks,part2_indicator28_remarks,part2_indicator29_remarks,part2_indicator30_remarks]) as indicators_remarks,
+  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials']) as indicators_label,
+  unnest(array['Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management'])as indicators_category
+from templates.synchronized_vaccination_monitoring_tool svmt
+),
+vaccination_site as
+(
+select 
+  svmtvti.parent_id,
+  unnest(array[part3_indicator1,part3_indicator2,part3_indicator3,part3_indicator4,part3_indicator5,part3_indicator6,part3_indicator7,part3_indicator8,part3_indicator9,part3_indicator10,part3_indicator11,part3_indicator12,part3_indicator13,part3_indicator14,part3_indicator15,part3_indicator16,part3_indicator17,part3_indicator18])as indicators_value,
+  unnest(array[part3_indicator1_remarks,part3_indicator2_remarks,part3_indicator3_remarks,part3_indicator4_remarks,part3_indicator5_remarks,part3_indicator6_remarks,part3_indicator7_remarks,part3_indicator8_remarks,part3_indicator9_remarks,part3_indicator10_remarks,part3_indicator11_remarks,part3_indicator12_remarks,part3_indicator13_remarks,part3_indicator14_remarks,part3_indicator15_remarks,part3_indicator16_remarks,part3_indicator17_remarks,part3_indicator18_remarks])as indicators_remarks,
+  unnest(array['Supervisor visits and supervises team','Microplan followed and reviewed','Vaccination strategies followed','Vaccine carrier carried','Use of resealable plastic','Vaccines are stored with appropriate temperatures','Encountered difficulties at site','Vaccines properly recorded','Finger markings correctly applied','Doses and vaccinated children properly recorded','Doors properly marked','Attaining of daily targets tracked','Healthcare waste appropriately handled','Vaccination team wearing PPE','Hand hygiene practised','Caregivers reminded to follow up routine vaccination','Caregivers reminded what to do in case of reactions','Members asking questions related to AFP'])as indicators_label,
+  unnest(array['At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site'])as indicators_category
+from templates.synchronized_vaccination_monitoring_tool_vaccination_team_info svmtvti    
+),
+monitoring_tool as 
+(
+select id, indicators_value, indicators_remarks, indicators_label, indicators_category from microplan_vaccine_management
+union all
+select parent_id,indicators_value, indicators_remarks, indicators_label, indicators_category from vaccination_site
+)
+select 
+  mt.id,
   svmt.date_vaccination_activity,
   a1.label as admin1,
   a2.label as admin2,
@@ -359,11 +395,139 @@ select
   bg.latitude,
   bg.longitude,
   a5.label as admin5,
-  svmt.vaccine_label,
+  svmt.vaccine_label, mt.indicators_value,
+  mt.indicators_remarks, 
+  mt.indicators_label,
+  mt.indicators_category,
+  smt.no_of_questions  
+from monitoring_tool mt
+left join csv.synchronized_monitoring_tool smt on mt.indicators_category=smt.indicators_category ---adds no.of questions in the category
+left join templates.synchronized_vaccination_monitoring_tool svmt on mt.id=svmt.id ---adds the missing fields in the repeat group
+left join csv.admin1 a1 on svmt.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
+where mt.indicators_value is not null
+);
+alter view staging.monitoring_tool owner to rt_vama;
+
+-----Synchronized Vaccination Monitoring Tool
+---This view categorizes monitored facilities
+create or replace view staging.monitored_facilities_overall_proportion as 
+(
+with microplan_vaccine_management as
+(
+select 
+  svmt.id,
   unnest(array[part1_indicator1,part1_indicator2,part1_indicator3,part1_indicator4,part1_indicator5,part1_indicator6,part1_indicator7,part1_indicator8,part1_indicator9,part1_indicator10,part1_indicator11,part1_indicator12,part1_indicator13,part1_indicator14,part1_indicator15,part1_indicator16,part1_indicator17,part1_indicator18,part1_indicator19,part1_indicator20,part1_indicator21,part1_indicator22,part1_indicator23,part1_indicator24,part2_indicator1,part2_indicator2,part2_indicator3,part2_indicator4,part2_indicator5,part2_indicator6,part2_indicator7,part2_indicator8,part2_indicator9,part2_indicator10,part2_indicator11,part2_indicator12,part2_indicator13,part2_indicator14,part2_indicator15,part2_indicator16,part2_indicator17,part2_indicator18,part2_indicator19,part2_indicator20,part2_indicator21,part2_indicator22,part2_indicator23,part2_indicator24,part2_indicator25,part2_indicator26,part2_indicator27,part2_indicator28,part2_indicator29,part2_indicator30]) as indicators_value,
   unnest(array[part1_indicator1_remarks,part1_indicator2_remarks,part1_indicator3_remarks,part1_indicator4_remarks,part1_indicator5_remarks,part1_indicator6_remarks,part1_indicator7_remarks,part1_indicator8_remarks,part1_indicator9_remarks,part1_indicator10_remarks,part1_indicator11_remarks,part1_indicator12_remarks,part1_indicator13_remarks,part1_indicator14_remarks,part1_indicator15_remarks,part1_indicator16_remarks,part1_indicator17_remarks,part1_indicator18_remarks,part1_indicator19_remarks,part1_indicator20_remarks,part1_indicator21_remarks,part1_indicator22_remarks,part1_indicator23_remarks,part1_indicator24_remarks,part2_indicator1_remarks,part2_indicator2_remarks,part2_indicator3_remarks,part2_indicator4_remarks,part2_indicator5_remarks,part2_indicator6_remarks,part2_indicator7_remarks,part2_indicator8_remarks,part2_indicator9_remarks,part2_indicator10_remarks,part2_indicator11_remarks,part2_indicator12_remarks,part2_indicator13_remarks,part2_indicator14_remarks,part2_indicator15_remarks,part2_indicator16_remarks,part2_indicator17_remarks,part2_indicator18_remarks,part2_indicator19_remarks,part2_indicator20_remarks,part2_indicator21_remarks,part2_indicator22_remarks,part2_indicator23_remarks,part2_indicator24_remarks,part2_indicator25_remarks,part2_indicator26_remarks,part2_indicator27_remarks,part2_indicator28_remarks,part2_indicator29_remarks,part2_indicator30_remarks]) as indicators_remarks,
-  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials']) as indicators_label 
+  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials']) as indicators_label,
+  unnest(array['Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management'])as indicators_category
 from templates.synchronized_vaccination_monitoring_tool svmt
+),
+vaccination_site as
+(
+select 
+  svmtvti.parent_id,
+  unnest(array[part3_indicator1,part3_indicator2,part3_indicator3,part3_indicator4,part3_indicator5,part3_indicator6,part3_indicator7,part3_indicator8,part3_indicator9,part3_indicator10,part3_indicator11,part3_indicator12,part3_indicator13,part3_indicator14,part3_indicator15,part3_indicator16,part3_indicator17,part3_indicator18])as indicators_value,
+  unnest(array[part3_indicator1_remarks,part3_indicator2_remarks,part3_indicator3_remarks,part3_indicator4_remarks,part3_indicator5_remarks,part3_indicator6_remarks,part3_indicator7_remarks,part3_indicator8_remarks,part3_indicator9_remarks,part3_indicator10_remarks,part3_indicator11_remarks,part3_indicator12_remarks,part3_indicator13_remarks,part3_indicator14_remarks,part3_indicator15_remarks,part3_indicator16_remarks,part3_indicator17_remarks,part3_indicator18_remarks])as indicators_remarks,
+  unnest(array['Supervisor visits and supervises team','Microplan followed and reviewed','Vaccination strategies followed','Vaccine carrier carried','Use of resealable plastic','Vaccines are stored with appropriate temperatures','Encountered difficulties at site','Vaccines properly recorded','Finger markings correctly applied','Doses and vaccinated children properly recorded','Doors properly marked','Attaining of daily targets tracked','Healthcare waste appropriately handled','Vaccination team wearing PPE','Hand hygiene practised','Caregivers reminded to follow up routine vaccination','Caregivers reminded what to do in case of reactions','Members asking questions related to AFP'])as indicators_label,
+  unnest(array['At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site','At Vaccination site'])as indicators_category
+from templates.synchronized_vaccination_monitoring_tool_vaccination_team_info svmtvti    
+),
+monitoring_tool as 
+(
+select id, indicators_value, indicators_remarks, indicators_label, indicators_category from microplan_vaccine_management
+union all
+select parent_id,indicators_value, indicators_remarks, indicators_label, indicators_category from vaccination_site
+),
+yes_responded_questions as
+(
+select 
+  mt.id,
+  svmt.date_vaccination_activity,
+  a1.label as admin1,
+  a2.label as admin2,
+  a3.label as admin3,
+  a4.label as admin4,
+  bg.latitude,
+  bg.longitude,
+  a5.label as admin5,
+  svmt.vaccine_label, 
+  mt.indicators_value,
+  mt.indicators_remarks, 
+  mt.indicators_label,
+  mt.indicators_category,
+  smt.no_of_questions,
+  count(mt.id) filter (where mt.indicators_value='Yes') as count_yes_questions
+from monitoring_tool mt
+left join csv.synchronized_monitoring_tool smt on mt.indicators_category=smt.indicators_category ---adds no.of questions in the category
+left join templates.synchronized_vaccination_monitoring_tool svmt on mt.id=svmt.id ---adds the missing fields in the repeat group
+left join csv.admin1 a1 on svmt.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
+where mt.indicators_value is not null
+group by 1,svmt.date_vaccination_activity,a1.label,a2.label,a3.label,a4.label,bg.latitude,bg.longitude,a5.label,svmt.vaccine_label,mt.indicators_value,mt.indicators_remarks,mt.indicators_label,mt.indicators_category,smt.no_of_questions
+),
+yes_category_proportion as 
+(
+select 
+id,
+date_vaccination_activity,
+admin1,
+admin2,
+admin3,
+admin4,
+admin5,
+latitude,
+longitude,
+vaccine_label,
+indicators_category,
+(sum(count_yes_questions)/max(no_of_questions))*100 as yes_category_proportion 
+from yes_responded_questions yrq
+group by 1,2,3,4,5,6,7,8,9,10,11
+)
+select 
+id,
+date_vaccination_activity,
+admin1,
+admin2,
+admin3,
+admin4,
+admin5,
+latitude,
+longitude,
+vaccine_label as vaccine_administered,
+(sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100 as overall_facility_proportion
+from yes_category_proportion
+group by 1,2,3,4,5,6,7,8,9,10
+);
+
+alter view staging.monitored_facilities_overall_proportion owner to rt_vama;
+
+
+----Vaccinated children in the monitoring tool
+create or replace view staging.vaccinated_children_under_monitoring_tool as
+(
+select  
+svmt.id,
+a1.label as admin1,
+a2.label as admin2,
+a3.label as admin3,
+a4.label as admin4,
+bg.latitude,
+bg.longitude,
+a5.label as admin5,
+svmt.date_vaccination_activity,
+svmt.vaccine_label as vaccine_administered,
+svmt.total_vaccinated_as_time_visit,
+svmt.hc_target
+from templates.synchronized_vaccination_monitoring_tool svmt 
 left join csv.admin1 a1 on svmt.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
 left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
@@ -372,7 +536,7 @@ left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels usin
 left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
 );
 
-alter view staging.monitoring_tool owner to rt_vama;
+alter view staging.vaccinated_children_under_monitoring_tool owner to rt_vama;
 
 ---- Health Center Level Monitoring and Assessment of Readiness
 ---- Inform link: https://inform.unicef.org/uniceftemplates/635/761
@@ -466,11 +630,11 @@ admin5,
 latitude,
 longitude,
 indicators_category,
-sum(count_)/max(no_of_questions) as prop
+sum(count_)/max(no_of_questions) as yes_category_proportion
 from value
 group by 1,2,3,4,5,6,7,8
 )
-----Assigns 'Yes' to all the facilities that have a sum 0f 8 which is the number of categories available.
+----Assigns 'Yes' to all the facilities that have a sum of 8 which is the number of categories available.
 select 
 admin1,
 admin2,
@@ -479,8 +643,10 @@ admin4,
 admin5,
 latitude,
 longitude,
-sum(prop) as readiness_value,
-case when sum(prop)=8 then 'Yes' else 'No' end as facility_ready
+sum(yes_category_proportion) as readiness_value,
+case when sum(yes_category_proportion)=8 then 'Yes' else 'No' end as facility_ready,
+round(((SUM(
+case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0) as category_value
 from prop
 group by 1,2,3,4,5,6,7;
 
@@ -561,7 +727,7 @@ left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.que
 alter view staging.rca_actuals owner to rt_vama;
 
 
-----This query creates a view that has the no.of doors visited, whether mop-up is needed data 
+----This query creates a view that has the no.of doors visited, whether mop-up is needed and number of children not vaccinated in the doors visited
 create or replace view staging.rca as
 (
 select 
@@ -577,7 +743,8 @@ select
   rl.label as vaccine_administered,
   srcaf.doors_visited,
   rca_mop_up,
-  rl1.label as conducted_by
+  rl1.label as conducted_by,
+  sum(ra.indicator_value) as total_not_vaccinated
 from templates.spv_rapid_coverage_assessment_form srcaf 
 left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on srcaf.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
@@ -587,6 +754,8 @@ left join csv.admin5 a5 on srcaf.admin5=a5.name::text ---Adds admin 5 labels usi
 left join csv.barangay_gps bg on srcaf.admin4=bg.barangay_code::text
 left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.question='vaccine_administered'
 left join staging.rca_labels rl1 on rl1.code=srcaf.conducted_by and rl1.question='conducted_by'
+left join staging.rca_actuals ra on srcaf.rca_date=ra.rca_date and rl.label=ra.vaccine_administered and a5.label=ra.admin5 and ra.rca_category='Not vaccinated'
+group by 1,2,3,4,5,6,7,8,9,10,11,12,13
 );
 alter view staging.rca owner to rt_vama;
 
@@ -656,3 +825,19 @@ where reasons_value is not null
 );
 
 alter view staging.rca_not_vaccinated_reasons owner to rt_vama;
+
+-----PowerBI views
+--- The PowerBI connector currently pulls data from views within the public schema. Hence the repointing to the public schema
+
+---Supplemental Immunization Activity Form
+--SIA actual values
+create or replace view public.sia_actuals as 
+(
+select * from staging.sia_actuals
+);
+alter view public.sia_actuals owner to rt_vama;
+
+
+
+
+
