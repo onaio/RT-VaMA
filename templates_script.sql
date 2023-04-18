@@ -156,13 +156,13 @@ select
  a5.label as admin5,
  a.vaccine_administered,
  SUM(a.total_vaccinated) as total_vaccinated,
- --t.daily_target,
  SUM(t.campaign_target) as campaign_target,
  vd.vials_used,
  vd.vials_discarded,
- vd.vaccine_dose
- ,
- vd.vial_dosage
+ vd.vaccine_dose,
+ vd.vial_dosage,
+ bg.latitude,
+ bg.longitude
 from csv.hard_coded_dates hcd 
 left join actuals a on a.date_vaccination_activity=hcd.date
 left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
@@ -172,11 +172,11 @@ left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using t
 left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
 left join vaccine_doses vd on vd.date_vaccination_activity=hcd.date and vd.vaccine_label=a.vaccine_administered and a.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
+left join csv.barangay_gps bg on a.admin4=bg.barangay_code::text
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
-group by 1,2,3,4,5,6,7,10,11,12,13
+group by 1,2,3,4,5,6,7,10,11,12,13,14,15
 );
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
-
 
 create or replace view staging.sia_actuals_target as
 (
@@ -289,6 +289,29 @@ where reasons_value is not null
 
 alter view staging.deferred_refused_reasons owner to rt_vama;
 
+
+----SIA Records
+---This query creates a view that can be used to show the no. of records/double counting
+create or replace view staging.sia_records as 
+(
+select 
+  sia.id as submission_id,
+  sia.date_vaccination_activity,
+  a1.label as admin1,
+  a2.label as admin2,
+  a3.label as admin3,
+  a4.label as admin4,
+  a5.label as admin5,
+  sia.vaccine_label as vaccine_administered 
+from templates.supplemental_immunization_activity sia 
+left join csv.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+);
+alter view staging.sia_records owner to rt_vama;
+
 ---This view creates the social mobilization indicators
 --- The link to the template: https://inform.unicef.org/uniceftemplates/635/765
 --- The social mobilization indicators data entails communication activities during or after a campaign.
@@ -342,7 +365,8 @@ select
   end as conducted_by,  
   c.indicators_category,
   c.indicators_value,
-  ssmir.vaccine_label as vaccine_administered 
+  ssmir.vaccine_label as vaccine_administered,
+  pic.iso2_code 
 from combined_indicators c  
 left join templates.spv_social_mobilization_indicators ssmi on c.id=ssmi.id
 left join csv.admin1 a1 on ssmi.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
@@ -350,6 +374,7 @@ left join csv.admin2 a2 on ssmi.admin2=a2.name::text ---Adds admin 2 labels usin
 left join csv.admin3 a3 on ssmi.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on ssmi.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join templates.spv_social_mobilization_indicators_refusals ssmir on ssmir.parent_id=c.id
+left join csv.province_iso2_codes pic on pic.admin2_id=a2.name
 );
 
 alter view staging.social_mobilization_indicators owner to rt_vama;
@@ -526,7 +551,8 @@ a5.label as admin5,
 svmt.date_vaccination_activity,
 svmt.vaccine_label as vaccine_administered,
 svmt.total_vaccinated_as_time_visit,
-svmt.hc_target
+svmt.hc_target,
+pic.iso2_code
 from templates.synchronized_vaccination_monitoring_tool svmt 
 left join csv.admin1 a1 on svmt.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
@@ -534,6 +560,7 @@ left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels usin
 left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
+left join csv.province_iso2_codes pic on pic.admin2_id::text=a2.name::text
 );
 
 alter view staging.vaccinated_children_under_monitoring_tool owner to rt_vama;
@@ -567,9 +594,25 @@ left join csv.admin4 a4 on hcl.admin4=a4.name::text ---Adds admin 4 labels using
 left join csv.admin5 a5 on hcl.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 left join csv.barangay_gps bg on hcl.admin4=bg.barangay_code::text
 )
-select ha.*,haqpc.no_of_questions 
+select
+ha.id,
+max(ha.assessment_date) as assessment_date,
+ha.vaccine_label,
+ha.admin1,
+ha.admin2,
+ha.admin3,
+ha.admin4,
+ha.latitude,
+ha.longitude,
+ha.admin5,
+ha.indicators_value,
+ha.indicators_remarks,
+ha.indicators_label,
+ha.indicators_category,
+haqpc.no_of_questions 
 from hc_assessment ha ----This file has the list of indicator categories with no.of questions per category
 left join csv.hc_assessment_questions_per_category haqpc on ha.indicators_category=haqpc.indicators_category 
+group by 1,3,4,5,6,7,8,9,10,11,12,13,14,15
 ;
 alter view staging.hcl_monitoring_assessment owner to rt_vama;
 
@@ -712,7 +755,8 @@ select
   srcafv.age_group_label,
   unnest(array['Present in hh','Present in hh','Vaccinated','Vaccinated','Not vaccinated','Not vaccinated']) as rca_category,
   unnest(array['Males','Females','Males','Females','Males','Females']) as indicator_category,
-  unnest(array[present_males,present_females,vaccinated_males,vaccinated_females,not_vaccinated_males,not_vaccinated_females]) as indicator_value
+  unnest(array[present_males,present_females,vaccinated_males,vaccinated_females,not_vaccinated_males,not_vaccinated_females]) as indicator_value,
+  pic.iso2_code
 from templates.spv_rapid_coverage_assessment_form_vaccination srcafv 
 left join templates.spv_rapid_coverage_assessment_form srcaf  on srcafv.parent_id=srcaf.id  --- Adds the fields assosciated with the repeat group data
 left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
@@ -722,6 +766,7 @@ left join csv.admin4 a4 on srcaf.admin4=a4.name::text ---Adds admin 4 labels usi
 left join csv.admin5 a5 on srcaf.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 left join csv.barangay_gps bg on srcaf.admin4=bg.barangay_code::text
 left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.question='vaccine_administered'
+left join csv.province_iso2_codes pic on pic.admin2_id::text=a2.name::text
 );
 
 alter view staging.rca_actuals owner to rt_vama;
@@ -744,7 +789,8 @@ select
   srcaf.doors_visited,
   rca_mop_up,
   rl1.label as conducted_by,
-  sum(ra.indicator_value) as total_not_vaccinated
+  sum(ra.indicator_value) as total_not_vaccinated,
+  pic.iso2_code
 from templates.spv_rapid_coverage_assessment_form srcaf 
 left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on srcaf.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
@@ -755,7 +801,8 @@ left join csv.barangay_gps bg on srcaf.admin4=bg.barangay_code::text
 left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.question='vaccine_administered'
 left join staging.rca_labels rl1 on rl1.code=srcaf.conducted_by and rl1.question='conducted_by'
 left join staging.rca_actuals ra on srcaf.rca_date=ra.rca_date and rl.label=ra.vaccine_administered and a5.label=ra.admin5 and ra.rca_category='Not vaccinated'
-group by 1,2,3,4,5,6,7,8,9,10,11,12,13
+left join csv.province_iso2_codes pic on pic.admin2_id::text=a2.name::text
+group by 1,2,3,4,5,6,7,8,9,10,11,12,13,15
 );
 alter view staging.rca owner to rt_vama;
 
