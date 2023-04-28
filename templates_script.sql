@@ -95,8 +95,6 @@ targets as
 --The link to the targets form: https://inform.unicef.org/uniceftemplates/635/977 
 (
 select 
- siat.id,
- siat.admin0,
  siat.admin1,
  siat.admin2,
  siat.admin3,
@@ -106,11 +104,10 @@ select
  siat.campaign_end_date,
  (siat.campaign_end_date - siat.campaign_start_date) as campaign_days,
  siat.vaccine_label,
- siattc.no_children as campaign_target,
- siattc.no_children / (siat.campaign_end_date - siat.campaign_start_date) as daily_target,
- siattc.age_group_label 
+ SUM(siattc.no_children) as campaign_target
 from templates.supplemental_immunization_activity_target siat  
 left join templates.supplemental_immunization_activity_target_target_children siattc on siattc.parent_id=siat.id 
+group by 1,2,3,4,5,6,7,8,9
 ),
 actuals as 
 ---Retrieves the actual values from the vaccination coverage group
@@ -123,11 +120,10 @@ select
   sia.admin4,
   sia.admin5,
   sia.vaccine_label as vaccine_administered,
-  SUM(siav.vaccinated_males + siav.vaccinated_females) as total_vaccinated,
-  siav.age_group_label 
+  SUM(siav.vaccinated_males + siav.vaccinated_females) + SUM(siav.vaccinated_males_previously_deferred + siav.vaccinated_females_previously_deferred) + SUM(siav.vaccinated_males_previously_refused + siav.vaccinated_females_previously_refused) as total_vaccinated
 from templates.supplemental_immunization_activity_vaccine siav 
 left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id
-group by 1,2,3,4,5,6,7,9
+group by 1,2,3,4,5,6,7
 ),
 vaccine_doses as
 ----Aggregates the vials used, vials discarded and vaccine dose up to admin 4
@@ -140,12 +136,12 @@ select
  sia.admin4,
  sia.admin5,
  sia.vaccine_label,
- sia.vial_dosage,
+ MAX(sia.vial_dosage) as vial_dosage,
  SUM(sia.vials_used) as vials_used,
  SUM(sia.vial_dosage::int*sia.vials_used) as vaccine_dose,
  SUM(sia.vials_discarded) as vials_discarded 
 from templates.supplemental_immunization_activity sia
-group by 1,2,3,4,5,6,7,8
+group by 1,2,3,4,5,6,7
 )
 select 
  date,
@@ -155,8 +151,8 @@ select
  a4.label as admin4,
  a5.label as admin5,
  a.vaccine_administered,
- SUM(a.total_vaccinated) as total_vaccinated,
- SUM(t.campaign_target) as campaign_target,
+ a.total_vaccinated as total_vaccinated,
+ t.campaign_target as campaign_target,
  vd.vials_used,
  vd.vials_discarded,
  vd.vaccine_dose,
@@ -165,7 +161,7 @@ select
  bg.longitude
 from csv.hard_coded_dates hcd 
 left join actuals a on a.date_vaccination_activity=hcd.date
-left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
+left join targets t on a.vaccine_administered=t.vaccine_label and t.admin5=a.admin5 and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
 left join csv.admin1 a1 on a.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on a.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
 left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
@@ -174,7 +170,6 @@ left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using 
 left join vaccine_doses vd on vd.date_vaccination_activity=hcd.date and vd.vaccine_label=a.vaccine_administered and a.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
 left join csv.barangay_gps bg on a.admin4=bg.barangay_code::text
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
-group by 1,2,3,4,5,6,7,10,11,12,13,14,15
 );
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
 
@@ -302,7 +297,10 @@ select
   a3.label as admin3,
   a4.label as admin4,
   a5.label as admin5,
-  sia.vaccine_label as vaccine_administered 
+  sia.vaccine_label as vaccine_administered,
+  sia.submitted_at,
+  sia.modified_at,
+  sia.enumerator 
 from templates.supplemental_immunization_activity sia 
 left join csv.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
@@ -884,7 +882,103 @@ select * from staging.sia_actuals
 );
 alter view public.sia_actuals owner to rt_vama;
 
+---SIA Aggregated values 
+create or replace view public.aggregated_sia_actuals_target as 
+(
+select * from staging.aggregated_sia_actuals_target
+);
+alter view public.aggregated_sia_actuals_target owner to rt_vama;
+
+---SIA Actuals, Target
+create or replace view public.sia_actuals_targets
+(
+select * from staging.sia_actuals_target sat 
+);
+alter view public.sia_actuals_targets owner to rt_vama;
 
 
+----SIA reasons breakdown
+create or replace view public.sia_deferred_refused_reasons as 
+(
+select * from staging.deferred_refused_reasons drr 
+);
+alter view public.sia_deferred_refused_reasons owner to rt_vama;
+
+----SIA Records
+create or replace view public.sia_records as 
+(
+select * from staging.sia_records
+);
+alter view public.sia_records owner to rt_vama;
+
+----Social mobilization indicators
+create or replace view public.social_mobilization_indicators as 
+(
+select * from staging.social_mobilization_indicators
+);
+alter view public.social_mobilization_indicators owner to rt_vama;
+
+
+---Monitoring tool
+create or replace view public.monitoring_tool as 
+(
+select * from staging.monitoring_tool mt 
+);
+alter view public.monitoring_tool owner to rt_vama;
+
+----Monitored facilities overall proportion
+create or replace view public.monitored_facilities_overall_proportion as 
+(
+select * from staging.monitored_facilities_overall_proportion
+);
+alter view public.monitored_facilities_overall_proportion owner to rt_vama;
+
+-----Vaccinated children under the monitoing tool
+create or replace view public.vaccinated_children_under_monitoring_tool as 
+(
+select * from staging.vaccinated_children_under_monitoring_tool
+);
+alter view public.vaccinated_children_under_monitoring_tool owner to rt_vama;
+
+----Health Assessment Readiness
+create or replace view public.hcl_monitoring_assessment as 
+(
+select * from staging.hcl_monitoring_assessment
+);
+alter view public.hcl_monitoring_assessment owner to rt_vama;
+
+----Ready facilities
+create or replace view public.ready_facilities as 
+(
+select * from staging.ready_facilities
+);
+alter view public.ready_facilities owner to rt_vama;
+
+
+-----RCA
+create or replace view public.rca_actuals as 
+(
+select * from staging.rca_actuals
+);
+alter view public.rca_actuals owner to rt_vama;
+
+create or replace view public.rca as 
+(
+select * from staging.rca
+);
+alter view public.rca owner to rt_vama;
+
+create or replace view public.rca_sources_info as 
+(
+select * from staging.rca_sources_info
+);
+alter view public.rca_sources_info owner to rt_vama;
+
+
+create or replace view public.rca_not_vaccinated_reasons as 
+(
+select * from staging.rca_not_vaccinated_reasons
+);
+alter view public.rca_not_vaccinated_reasons owner to rt_vama;
 
 
