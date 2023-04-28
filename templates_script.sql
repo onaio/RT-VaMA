@@ -364,7 +364,10 @@ select
   c.indicators_category,
   c.indicators_value,
   ssmir.vaccine_label as vaccine_administered,
-  pic.iso2_code 
+  pic.iso2_code,
+  ssmi.submitted_at,
+  ssmi.modified_at,
+  ssmi.enumerator 
 from combined_indicators c  
 left join templates.spv_social_mobilization_indicators ssmi on c.id=ssmi.id
 left join csv.admin1 a1 on ssmi.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
@@ -550,7 +553,10 @@ svmt.date_vaccination_activity,
 svmt.vaccine_label as vaccine_administered,
 svmt.total_vaccinated_as_time_visit,
 svmt.hc_target,
-pic.iso2_code
+pic.iso2_code,
+svmt.submitted_at,
+svmt.modified_at,
+svmt.enumerator
 from templates.synchronized_vaccination_monitoring_tool svmt 
 left join csv.admin1 a1 on svmt.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
@@ -607,10 +613,14 @@ ha.indicators_value,
 ha.indicators_remarks,
 ha.indicators_label,
 ha.indicators_category,
-haqpc.no_of_questions 
+haqpc.no_of_questions,
+hcl.submitted_at,
+hcl.modified_at,
+hcl.enumerator 
 from hc_assessment ha ----This file has the list of indicator categories with no.of questions per category
 left join csv.hc_assessment_questions_per_category haqpc on ha.indicators_category=haqpc.indicators_category 
-group by 1,3,4,5,6,7,8,9,10,11,12,13,14,15
+left join templates.health_center_level_monitoring_and_assessment_of_readiness hcl on ha.id=hcl.id 
+group by 1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
 ;
 alter view staging.hcl_monitoring_assessment owner to rt_vama;
 
@@ -788,7 +798,10 @@ select
   rca_mop_up,
   rl1.label as conducted_by,
   sum(ra.indicator_value) as total_not_vaccinated,
-  pic.iso2_code
+  pic.iso2_code,
+  srcaf.submitted_at,
+  srcaf.modified_at,
+  srcaf.enumerator 
 from templates.spv_rapid_coverage_assessment_form srcaf 
 left join csv.admin1 a1 on srcaf.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
 left join csv.admin2 a2 on srcaf.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
