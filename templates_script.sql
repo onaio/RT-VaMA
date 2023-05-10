@@ -66,8 +66,8 @@ select
   a2.label as admin2,
   a3.label as admin3,
   a4.label as admin4,
-  bg.latitude,
-  bg.longitude,
+  sia.admin4_lat::real as latitude,
+  sia.admin4_long::real as longitude,
   a5.label as admin5,
   sia.vaccine_label as vaccine_administered,
   siav.age_group_label,
@@ -81,7 +81,6 @@ left join csv.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using
 left join csv.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
-left join csv.barangay_gps bg on sia.admin4=bg.barangay_code::text
 );
 alter view staging.sia_actuals owner to rt_vama;
 
@@ -120,10 +119,12 @@ select
   sia.admin4,
   sia.admin5,
   sia.vaccine_label as vaccine_administered,
-  SUM(siav.vaccinated_males + siav.vaccinated_females) + SUM(siav.vaccinated_males_previously_deferred + siav.vaccinated_females_previously_deferred) + SUM(siav.vaccinated_males_previously_refused + siav.vaccinated_females_previously_refused) as total_vaccinated
+  SUM(siav.vaccinated_males + siav.vaccinated_females) + SUM(siav.vaccinated_males_previously_deferred + siav.vaccinated_females_previously_deferred) + SUM(siav.vaccinated_males_previously_refused + siav.vaccinated_females_previously_refused) as total_vaccinated,
+  sia.admin4_lat as latitude,
+  sia.admin4_long as longitude
 from templates.supplemental_immunization_activity_vaccine siav 
 left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id
-group by 1,2,3,4,5,6,7
+group by 1,2,3,4,5,6,7,9,10
 ),
 vaccine_doses as
 ----Aggregates the vials used, vials discarded and vaccine dose up to admin 4
@@ -157,8 +158,8 @@ select
  vd.vials_discarded,
  vd.vaccine_dose,
  vd.vial_dosage,
- bg.latitude,
- bg.longitude
+ a.latitude::real,
+ a.longitude::real
 from csv.hard_coded_dates hcd 
 left join actuals a on a.date_vaccination_activity=hcd.date
 left join targets t on a.vaccine_administered=t.vaccine_label and t.admin5=a.admin5 and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
@@ -168,7 +169,6 @@ left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using t
 left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
 left join vaccine_doses vd on vd.date_vaccination_activity=hcd.date and vd.vaccine_label=a.vaccine_administered and a.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
-left join csv.barangay_gps bg on a.admin4=bg.barangay_code::text
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
@@ -213,10 +213,12 @@ select
   SUM(siav.refused_males+ siav.refused_females) as total_refused,
   SUM(siav.vaccinated_males_previously_deferred + siav.vaccinated_females_previously_deferred) as total_vaccinated_previously_deferred,
   SUM(siav.vaccinated_males_previously_refused + siav.vaccinated_females_previously_refused) as total_vaccinated_previously_refused,
-  siav.age_group_label 
+  siav.age_group_label,
+  sia.admin4_lat as latitude,
+  sia.admin4_long as longitude
 from templates.supplemental_immunization_activity_vaccine siav 
 left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id
-group by 1,2,3,4,5,6,7,13
+group by 1,2,3,4,5,6,7,13,14,15
 )
 select 
  date,
@@ -229,8 +231,8 @@ select
  a.total_vaccinated,
  t.campaign_target,
  a.age_group_label,
- bg.latitude,
- bg.longitude,
+ a.latitude::real,
+ a.longitude::real,
  pic.iso2_code,
  a.total_deferred,
  a.total_refused,
@@ -244,7 +246,6 @@ left join csv.admin2 a2 on a.admin2=a2.name::text ---Adds admin 2 labels using t
 left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
-left join csv.barangay_gps bg on a.admin4=bg.barangay_code::text
 left join csv.province_iso2_codes pic  on pic.admin2_id::text=a.admin2
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
@@ -389,10 +390,10 @@ with microplan_vaccine_management as
 (
 select 
   svmt.id,
-  unnest(array[part1_indicator1,part1_indicator2,part1_indicator3,part1_indicator4,part1_indicator5,part1_indicator6,part1_indicator7,part1_indicator8,part1_indicator9,part1_indicator10,part1_indicator11,part1_indicator12,part1_indicator13,part1_indicator14,part1_indicator15,part1_indicator16,part1_indicator17,part1_indicator18,part1_indicator19,part1_indicator20,part1_indicator21,part1_indicator22,part1_indicator23,part1_indicator24,part2_indicator1,part2_indicator2,part2_indicator3,part2_indicator4,part2_indicator5,part2_indicator6,part2_indicator7,part2_indicator8,part2_indicator9,part2_indicator10,part2_indicator11,part2_indicator12,part2_indicator13,part2_indicator14,part2_indicator15,part2_indicator16,part2_indicator17,part2_indicator18,part2_indicator19,part2_indicator20,part2_indicator21,part2_indicator22,part2_indicator23,part2_indicator24,part2_indicator25,part2_indicator26,part2_indicator27,part2_indicator28,part2_indicator29,part2_indicator30]) as indicators_value,
-  unnest(array[part1_indicator1_remarks,part1_indicator2_remarks,part1_indicator3_remarks,part1_indicator4_remarks,part1_indicator5_remarks,part1_indicator6_remarks,part1_indicator7_remarks,part1_indicator8_remarks,part1_indicator9_remarks,part1_indicator10_remarks,part1_indicator11_remarks,part1_indicator12_remarks,part1_indicator13_remarks,part1_indicator14_remarks,part1_indicator15_remarks,part1_indicator16_remarks,part1_indicator17_remarks,part1_indicator18_remarks,part1_indicator19_remarks,part1_indicator20_remarks,part1_indicator21_remarks,part1_indicator22_remarks,part1_indicator23_remarks,part1_indicator24_remarks,part2_indicator1_remarks,part2_indicator2_remarks,part2_indicator3_remarks,part2_indicator4_remarks,part2_indicator5_remarks,part2_indicator6_remarks,part2_indicator7_remarks,part2_indicator8_remarks,part2_indicator9_remarks,part2_indicator10_remarks,part2_indicator11_remarks,part2_indicator12_remarks,part2_indicator13_remarks,part2_indicator14_remarks,part2_indicator15_remarks,part2_indicator16_remarks,part2_indicator17_remarks,part2_indicator18_remarks,part2_indicator19_remarks,part2_indicator20_remarks,part2_indicator21_remarks,part2_indicator22_remarks,part2_indicator23_remarks,part2_indicator24_remarks,part2_indicator25_remarks,part2_indicator26_remarks,part2_indicator27_remarks,part2_indicator28_remarks,part2_indicator29_remarks,part2_indicator30_remarks]) as indicators_remarks,
-  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials']) as indicators_label,
-  unnest(array['Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management'])as indicators_category
+  unnest(array[part1_indicator1,part1_indicator2,part1_indicator3,part1_indicator4,part1_indicator5,part1_indicator6,part1_indicator7,part1_indicator8,part1_indicator9,part1_indicator10,part1_indicator11,part1_indicator12,part1_indicator13,part1_indicator14,part1_indicator15,part1_indicator16,part1_indicator17,part1_indicator18,part1_indicator19,part1_indicator20,part1_indicator21,part1_indicator22,part1_indicator23,part1_indicator24,part2_indicator1,part2_indicator2,part2_indicator3,part2_indicator4,part2_indicator5,part2_indicator6,part2_indicator7,part2_indicator8,part2_indicator9,part2_indicator10,part2_indicator11,part2_indicator12,part2_indicator13,part2_indicator14,part2_indicator15,part2_indicator16,part2_indicator17,part2_indicator18,part2_indicator19,part2_indicator20,part2_indicator21,part2_indicator22,part2_indicator23,part2_indicator24,part2_indicator25,part2_indicator26,part2_indicator27,part2_indicator28,part2_indicator29,part2_indicator30,part2_indicator28a::text,part2_indicator29a::text,part2_indicator30a::text]) as indicators_value,
+  unnest(array[part1_indicator1_remarks,part1_indicator2_remarks,part1_indicator3_remarks,part1_indicator4_remarks,part1_indicator5_remarks,part1_indicator6_remarks,part1_indicator7_remarks,part1_indicator8_remarks,part1_indicator9_remarks,part1_indicator10_remarks,part1_indicator11_remarks,part1_indicator12_remarks,part1_indicator13_remarks,part1_indicator14_remarks,part1_indicator15_remarks,part1_indicator16_remarks,part1_indicator17_remarks,part1_indicator18_remarks,part1_indicator19_remarks,part1_indicator20_remarks,part1_indicator21_remarks,part1_indicator22_remarks,part1_indicator23_remarks,part1_indicator24_remarks,part2_indicator1_remarks,part2_indicator2_remarks,part2_indicator3_remarks,part2_indicator4_remarks,part2_indicator5_remarks,part2_indicator6_remarks,part2_indicator7_remarks,part2_indicator8_remarks,part2_indicator9_remarks,part2_indicator10_remarks,part2_indicator11_remarks,part2_indicator12_remarks,part2_indicator13_remarks,part2_indicator14_remarks,part2_indicator15_remarks,part2_indicator16_remarks,part2_indicator17_remarks,part2_indicator18_remarks,part2_indicator19_remarks,part2_indicator20_remarks,part2_indicator21_remarks,part2_indicator22_remarks,part2_indicator23_remarks,part2_indicator24_remarks,part2_indicator25_remarks,part2_indicator26_remarks,part2_indicator27_remarks,part2_indicator28_remarks,part2_indicator29_remarks,part2_indicator30_remarks,part2_indicator28b,part2_indicator29b,part2_indicator30b]) as indicators_remarks,
+  unnest(array['Presence of data board','Presence of health center microplan','Presence of spot map','Indication of population/specific target','Inclusion of activities for social preparation','Inclusion of dialogues with local officials/CSG','Public announcements are made','Evidence that social mobilization were done','Presence of activities to enable access in hard to reach areas are expected','Training of vaccination teams on comms and social mobilization','Presence of daily itinerary schedule','Presence of specific vaccination strategy','Supervisory plan','Presence of separate sheet for vaccines and other logistic calculations','Enough campaign forms','Enough mother/child book or vaccination cards','Presence of transportation support','Response/referral for AEFI','Presence of contingency plan to include emergencies in case of absence of vaccination team member','Schedule for mop ups','Plan for RCA intra-campaign','Evidence of regular feedback meeting','Health care waste plan','Follow up visits','Presence of health facility management plan','Presence of continuous electricity supply','Presence of generator/solar power that can be used in case of intermittent power supply','Presence of refrigiration that can be used for vaccine','Vaccines placed in separate box','Proper label is used for vaccine','Vaccines are stored with appropriate temperature','Presence of adequate temperature monitoring devices','Conduct of regular temperature monitoring','Proper temperature monitoring','Note of temperature breach','Availability of ice pack freezing capacity','Recording of vaccines that are issued daily','Proper filling up of forms','Presence of enough vaccine carriers','Presence of enough ice packs','Providing immunzation at a fixed post','Presence of vaccine carrier that is separately label','Use of resealable plastic','Use of resealable plastic for used vials','Return of reusable vials','Accounting of all collected vials','Presence of vaccine accountability monitor','Placing of collected vials in a secured container','Empty vials, sealed properly','Returning of un-opened/un used vial','Account of used and unused vials','Missing vials identified','Replaced vials identified','Damaged vials','Number of missing vials', 'Number of replaced vials','Number of damaged vials']) as indicators_label,
+  unnest(array['Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Information board and microplan check','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management','Vaccine management'])as indicators_category
 from templates.synchronized_vaccination_monitoring_tool svmt
 ),
 vaccination_site as
@@ -418,8 +419,8 @@ select
   a2.label as admin2,
   a3.label as admin3,
   a4.label as admin4,
-  bg.latitude,
-  bg.longitude,
+  svmt.admin4_lat::real as latitude,
+  svmt.admin4_long::real as longitude,
   a5.label as admin5,
   svmt.vaccine_label, mt.indicators_value,
   mt.indicators_remarks, 
@@ -434,7 +435,6 @@ left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels usin
 left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
-left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
 where mt.indicators_value is not null
 );
 alter view staging.monitoring_tool owner to rt_vama;
@@ -478,8 +478,8 @@ select
   a2.label as admin2,
   a3.label as admin3,
   a4.label as admin4,
-  bg.latitude,
-  bg.longitude,
+  svmt.admin4_lat::real as latitude,
+  svmt.admin4_long::real as longitude,
   a5.label as admin5,
   svmt.vaccine_label, 
   mt.indicators_value,
@@ -496,9 +496,8 @@ left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels usin
 left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
-left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
 where mt.indicators_value is not null
-group by 1,svmt.date_vaccination_activity,a1.label,a2.label,a3.label,a4.label,bg.latitude,bg.longitude,a5.label,svmt.vaccine_label,mt.indicators_value,mt.indicators_remarks,mt.indicators_label,mt.indicators_category,smt.no_of_questions
+group by 1,svmt.date_vaccination_activity,a1.label,a2.label,a3.label,a4.label,svmt.admin4_lat,svmt.admin4_long,a5.label,svmt.vaccine_label,mt.indicators_value,mt.indicators_remarks,mt.indicators_label,mt.indicators_category,smt.no_of_questions
 ),
 yes_category_proportion as 
 (
@@ -529,7 +528,12 @@ admin5,
 latitude,
 longitude,
 vaccine_label as vaccine_administered,
-(sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100 as overall_facility_proportion
+(sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100 as overall_facility_proportion,
+case 
+	when ((sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100) >=0 and ((sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100) < 50 then '<50%'
+	when ((sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100) >=50 and ((sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100) <= 99 then '50-99%'
+	when ((sum(case when yes_category_proportion=100 then 1 else 0 end)::float/ 3)*100) =100 then '100%'
+end as overall_proportion_category
 from yes_category_proportion
 group by 1,2,3,4,5,6,7,8,9,10
 );
@@ -546,8 +550,8 @@ a1.label as admin1,
 a2.label as admin2,
 a3.label as admin3,
 a4.label as admin4,
-bg.latitude,
-bg.longitude,
+svmt.admin4_lat::real as latitude,
+svmt.admin4_long::real as longitude,
 a5.label as admin5,
 svmt.date_vaccination_activity,
 svmt.vaccine_label as vaccine_administered,
@@ -563,7 +567,6 @@ left join csv.admin2 a2 on svmt.admin2=a2.name::text ---Adds admin 2 labels usin
 left join csv.admin3 a3 on svmt.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
-left join csv.barangay_gps bg on svmt.admin4=bg.barangay_code::text
 left join csv.province_iso2_codes pic on pic.admin2_id::text=a2.name::text
 );
 
@@ -583,8 +586,8 @@ a1.label as admin1,
 a2.label as admin2,
 a3.label as admin3,
 a4.label as admin4,
-bg.latitude,
-bg.longitude,
+hcl.admin4_lat::real as latitude,
+hcl.admin4_long::real as longitude,
 a5.label as admin5,
 unnest(array[microplan_indicator1,microplan_indicator2,microplan_indicator3,microplan_indicator4,microplan_indicator5,microplan_indicator6,microplan_indicator7,microplan_indicator8,microplan_indicator9,logistics_indicator1,logistics_indicator2,logistics_indicator3,logistics_indicator4,logistics_indicator5,logistics_indicator6,logistics_indicator7,social_mob_indicator1,social_mob_indicator2,social_mob_indicator3,imm_safety_indicator1,imm_safety_indicator2,supervision_indicator1,supervision_indicator2,supervision_indicator3,supervision_indicator4,supervision_indicator5,reporting_indicator1,reporting_indicator2,reporting_indicator3,vacc_mngt_indicator1,vacc_mngt_indicator2,vacc_mngt_indicator3,vacc_mngt_indicator4,hr_indicator1]) as indicators_value,
 unnest(array[microplan_indicator1_remarks,microplan_indicator2_remarks,microplan_indicator3_remarks,microplan_indicator4_remarks,microplan_indicator5_remarks,microplan_indicator6_remarks,microplan_indicator7_remarks,microplan_indicator8_remarks,microplan_indicator9_remarks,logistics_indicator1_remarks,logistics_indicator2_remarks,logistics_indicator3_remarks,logistics_indicator4_remarks,logistics_indicator5_remarks,logistics_indicator6_remarks,logistics_indicator7_remarks,social_mob_indicator1_remarks,social_mob_indicator2_remarks,social_mob_indicator3_remarks,imm_safety_indicator1_remarks,imm_safety_indicator2_remarks,supervision_indicator1_remarks ,supervision_indicator2_remarks,supervision_indicator3_remarks,supervision_indicator4_remarks,supervision_indicator5_remarks,reporting_indicator1_remarks,reporting_indicator2_remarks,reporting_indicator3_remarks,vacc_mngt_indicator1_remarks,vacc_mngt_indicator2_remarks,vacc_mngt_indicator3_remarks,vacc_mngt_indicator4_remarks,hr_indicator2_remarks]) as indicators_remarks,
@@ -596,7 +599,6 @@ left join csv.admin2 a2 on hcl.admin2=a2.name::text ---Adds admin 2 labels using
 left join csv.admin3 a3 on hcl.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on hcl.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on hcl.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
-left join csv.barangay_gps bg on hcl.admin4=bg.barangay_code::text
 )
 select
 ha.id,
@@ -636,8 +638,8 @@ a1.label as admin1,
 a2.label as admin2,
 a3.label as admin3,
 a4.label as admin4,
-bg.latitude,
-bg.longitude,
+hcl.admin4_lat::real as latitude,
+hcl.admin4_long::real as longitude,
 a5.label as admin5,
 unnest(array[microplan_indicator1,microplan_indicator2,microplan_indicator3,microplan_indicator4,microplan_indicator5,microplan_indicator6,microplan_indicator7,microplan_indicator8,microplan_indicator9,logistics_indicator1,logistics_indicator2,logistics_indicator3,logistics_indicator4,logistics_indicator5,logistics_indicator6,logistics_indicator7,social_mob_indicator1,social_mob_indicator2,social_mob_indicator3,imm_safety_indicator1,imm_safety_indicator2,supervision_indicator1,supervision_indicator2,supervision_indicator3,supervision_indicator4,supervision_indicator5,reporting_indicator1,reporting_indicator2,reporting_indicator3,vacc_mngt_indicator1,vacc_mngt_indicator2,vacc_mngt_indicator3,vacc_mngt_indicator4,hr_indicator1]) as indicators_value,
 unnest(array[microplan_indicator1_remarks,microplan_indicator2_remarks,microplan_indicator3_remarks,microplan_indicator4_remarks,microplan_indicator5_remarks,microplan_indicator6_remarks,microplan_indicator7_remarks,microplan_indicator8_remarks,microplan_indicator9_remarks,logistics_indicator1_remarks,logistics_indicator2_remarks,logistics_indicator3_remarks,logistics_indicator4_remarks,logistics_indicator5_remarks,logistics_indicator6_remarks,logistics_indicator7_remarks,social_mob_indicator1_remarks,social_mob_indicator2_remarks,social_mob_indicator3_remarks,imm_safety_indicator1_remarks,imm_safety_indicator2_remarks,supervision_indicator1_remarks ,supervision_indicator2_remarks,supervision_indicator3_remarks,supervision_indicator4_remarks,supervision_indicator5_remarks,reporting_indicator1_remarks,reporting_indicator2_remarks,reporting_indicator3_remarks,vacc_mngt_indicator1_remarks,vacc_mngt_indicator2_remarks,vacc_mngt_indicator3_remarks,vacc_mngt_indicator4_remarks,hr_indicator2_remarks]) as indicators_remarks,
@@ -649,7 +651,6 @@ left join csv.admin2 a2 on hcl.admin2=a2.name::text ---Adds admin 2 labels using
 left join csv.admin3 a3 on hcl.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on hcl.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on hcl.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
-left join csv.barangay_gps bg on hcl.admin4=bg.barangay_code::text
 ),
 ----Gets the number of facilities that have 'Yes' as a response to the questions
 value as 
@@ -697,7 +698,12 @@ longitude,
 sum(yes_category_proportion) as readiness_value,
 case when sum(yes_category_proportion)=8 then 'Yes' else 'No' end as facility_ready,
 round(((SUM(
-case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0) as category_value
+case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0) as category_value,
+case   
+	when (round(((SUM(case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0)) >=0 and (round(((SUM(case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0))<50 then '<50%'
+	when (round(((SUM(case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0)) >=50 and (round(((SUM(case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0))<=99 then '50-99%'
+	when (round(((SUM(case when yes_category_proportion=1 then 1 else 0 end)::float / 8)*100)::int,0)) =100 then '100%' else null
+end as category_label
 from prop
 group by 1,2,3,4,5,6,7;
 
