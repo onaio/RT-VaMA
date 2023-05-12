@@ -909,7 +909,7 @@ select * from staging.aggregated_sia_actuals_target
 alter view public.aggregated_sia_actuals_target owner to rt_vama;
 
 ---SIA Actuals, Target
-create or replace view public.sia_actuals_targets
+create or replace view public.sia_actuals_targets as
 (
 select * from staging.sia_actuals_target sat 
 );
@@ -926,14 +926,41 @@ alter view public.sia_deferred_refused_reasons owner to rt_vama;
 ----SIA Records
 create or replace view public.sia_records as 
 (
-select * from staging.sia_records
+select 
+     submission_id,
+     date_vaccination_activity,
+     admin1,
+     admin2,
+     admin3,
+     admin4,
+     admin5,
+     vaccine_administered,
+     submitted_at::date,
+     modified_at::date,
+     enumerator
+from staging.sia_records
 );
 alter view public.sia_records owner to rt_vama;
 
 ----Social mobilization indicators
 create or replace view public.social_mobilization_indicators as 
 (
-select * from staging.social_mobilization_indicators
+select  
+    id,
+    assessment_date,
+    admin1,
+    admin2,
+    admin3,
+    admin4,
+    conducted_by,
+    indicators_category,
+    indicators_value,
+    vaccine_administered,
+    iso2_code,
+    submitted_at::date,
+    modified_at::date,
+    enumerator
+from staging.social_mobilization_indicators
 );
 alter view public.social_mobilization_indicators owner to rt_vama;
 
@@ -955,14 +982,50 @@ alter view public.monitored_facilities_overall_proportion owner to rt_vama;
 -----Vaccinated children under the monitoing tool
 create or replace view public.vaccinated_children_under_monitoring_tool as 
 (
-select * from staging.vaccinated_children_under_monitoring_tool
+select 
+    id,
+    admin1,
+    admin2,
+    admin3,
+    admin4,
+    latitude,
+    longitude,
+    admin5,
+    date_vaccination_activity,
+    vaccine_administered,
+    total_vaccinated_as_time_visit,
+    hc_target,
+    iso2_code,
+    submitted_at::date,
+    modified_at::date,
+    enumerator
+from staging.vaccinated_children_under_monitoring_tool vcumt 
 );
 alter view public.vaccinated_children_under_monitoring_tool owner to rt_vama;
 
 ----Health Assessment Readiness
 create or replace view public.hcl_monitoring_assessment as 
 (
-select * from staging.hcl_monitoring_assessment
+select 
+     id,
+     assessment_date,
+     vaccine_label,
+     admin1,
+     admin2,
+     admin3,
+     admin4,
+     latitude,
+     longitude,
+     admin5,
+     indicators_value,
+     indicators_remarks,
+     indicators_label,
+     indicators_category,
+     no_of_questions,
+     submitted_at::date,
+     modified_at::date,
+     enumerator
+from staging.hcl_monitoring_assessment
 );
 alter view public.hcl_monitoring_assessment owner to rt_vama;
 
@@ -981,11 +1044,32 @@ select * from staging.rca_actuals
 );
 alter view public.rca_actuals owner to rt_vama;
 
+
 create or replace view public.rca as 
 (
-select * from staging.rca
+select 
+    submission_id,
+    rca_date,
+    admin1,
+    admin2,
+    admin3,
+    admin4,
+    latitude,
+    longitude,
+    admin5,
+    vaccine_administered,
+    doors_visited,
+    rca_mop_up,
+    conducted_by,
+    total_not_vaccinated,
+    iso2_code,
+    submitted_at::date,
+    modified_at::date,
+    enumerator
+from staging.rca
 );
 alter view public.rca owner to rt_vama;
+
 
 create or replace view public.rca_sources_info as 
 (
