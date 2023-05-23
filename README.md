@@ -22,4 +22,15 @@ The data transformation scripts include:
 
 3. rca_script.sql This script transforms data from the `Rapid Coverage Assessment` form. Please note that, in order to execute the queries, you'll need access to the form submissions, as well as to the administrative areas and the household list attached to the original form (`spv_rapid_coverage_assessment_form_vaccination`) 
 
--- To be able to execute the queries below, you'll need access to the following tables 
+
+Each script works to cerate a set of final tables that can be connected to the BI tool of choice (e.g. PowerBI, Superset). They achive the objective according to the same logic:
+- create labels if any
+- create intermediate table / views
+- create final tables with logic for metrics
+
+In order to edit these scripts, a country office should: 
+1. Understand which forms are needed
+2. Pick the relevant scripts
+3. adjust the scripts to generate .. 
+4. 
+Plz be careful ...
