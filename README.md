@@ -18,7 +18,8 @@ The data transformation scripts include:
 
 1. hcl_readiness_script. This script transforms data from the `Health Center Level Monitoring and Assessment of Readiness` form. Within this script there are 2 SQL queries, one that unnests the forms questions and another one that calculates the readiness proportion based on the question categories that are available.
 
+2. ... Whatever script covers SIA targets and actuals
 
-3. rca_script.sql This script transforms data from the `Rapid Convenience Assessment` form. Please note that, in order to execute the queries, you'll need access to the form submissions, as well as to the administrative areas and the household list attached to the original form (`spv_rapid_coverage_assessment_form_vaccination`) 
+3. rca_script.sql This script transforms data from the `Rapid Coverage Assessment` form. Please note that, in order to execute the queries, you'll need access to the form submissions, as well as to the administrative areas and the household list attached to the original form (`spv_rapid_coverage_assessment_form_vaccination`) 
 
 -- To be able to execute the queries below, you'll need access to the following tables 
