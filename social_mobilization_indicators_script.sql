@@ -30,7 +30,8 @@ mobilization_indicators as
 --This section creates a tidy section of the social mobilization activities such as number of households visited etc.
 select 
  id,
- unnest(array['Social mobilisers/community volunteers engaged','Households visited','Group meetings/learning sessions with caregivers conducted','Religious institutions visited','Advocacy meetings with community leaders','Posters and banners produced and displayed']) as indicator_category,
+ unnest(array['Social mobilisers/community volunteers engaged','Households visited','Group meetings/learning sessions with caregivers conducted',
+ 'Religious institutions visited','Advocacy meetings with community leaders','Posters and banners produced and displayed']) as indicator_category,
  unnest(array[social_mobilisers,hhs_visited,learning_sessions,religious_institutions,advocacy_meetings,posters_banners]) as indicator_value
 from templates.spv_social_mobilization_indicators ssmi 
 ),
