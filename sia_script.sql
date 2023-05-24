@@ -53,8 +53,8 @@ alter view staging.sia_labels owner to rt_vama;
 
 
 ---- SIA Actuals
---- This query creates a view that has the SIA actual vaccinated, refused and deferred values collect across the different facilities per age group and gender
---- There is unnesting defined in the query so as to create a tidy table that can be used to create different visualization based on the indicators required.
+--- This query creates a view that has the SIA actual vaccinated, refused and deferred values collected across the different facilities per age group and gender
+--- There is unnesting in the query so as to create a tidy table that can be used to create different visualization based on the indicators required.
 --- For the query to execute successfully, the following tables are required:
        --- a. supplemental_immunization_activity_vaccine - the repeat group table within the SIA form
        --- b. supplemental_immunization_activity - the table with the actual vaccination values; vaccinated children, refused children, deferred children
@@ -107,93 +107,113 @@ alter view staging.sia_actuals owner to rt_vama;
        --- i. admin5 - this table contains all the admin5 level admin names and codes
 --- The following sections need to updated during customization:
       --- a.The admin1, admin2, admin3, admin4 and admin5 files within the CSV schema need to be updated to match the administrative hierarchy of the respective country reporting_office adopting the tool
-create or replace view staging.aggregated_sia_actuals_target as
-(
-with 
-targets as 
---Retrieves the campaign target from the targets form, then computes the daily target based on the number of days the campaign is supposed to take.
---The link to the targets form: https://inform.unicef.org/uniceftemplates/635/977 
+---This sub query creates the SIA targets view
+create or replace view staging.sia_targets as 
 (
 select 
- siat.admin1,
- siat.admin2,
- siat.admin3,
- siat.admin4,
- siat.admin5,
- siat.campaign_start_date,
- siat.campaign_end_date,
- (siat.campaign_end_date - siat.campaign_start_date) as campaign_days,
- siat.vaccine_label,
- SUM(siattc.no_children) as campaign_target
-from templates.supplemental_immunization_activity_target siat  
-left join templates.supplemental_immunization_activity_target_target_children siattc on siattc.parent_id=siat.id 
-group by 1,2,3,4,5,6,7,8,9
-),
-actuals as 
----Retrieves the actual values from the vaccination coverage group
-(
-select 
-  sia.date_vaccination_activity,
-  sia.admin1,
-  sia.admin2,
-  sia.admin3,
-  sia.admin4,
-  sia.admin5,
-  sia.vaccine_label as vaccine_administered,
-  SUM(siav.vaccinated_males + siav.vaccinated_females) + SUM(siav.vaccinated_males_previously_deferred + siav.vaccinated_females_previously_deferred) + SUM(siav.vaccinated_males_previously_refused + siav.vaccinated_females_previously_refused) as total_vaccinated,
-  sia.admin4_lat as latitude,
-  sia.admin4_long as longitude
-from templates.supplemental_immunization_activity_vaccine siav 
-left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id
-group by 1,2,3,4,5,6,7,9,10
-),
-vaccine_doses as
-----Aggregates the vials used, vials discarded and vaccine dose up to admin 4
-(
-select 
- sia.date_vaccination_activity,
- sia.admin1,
- sia.admin2,
- sia.admin3,
- sia.admin4,
- sia.admin5,
- sia.vaccine_label,
- MAX(sia.vial_dosage) as vial_dosage,
- SUM(sia.vials_used) as vials_used,
- SUM(sia.vial_dosage::int*sia.vials_used) as vaccine_dose,
- SUM(sia.vials_discarded) as vials_discarded 
-from templates.supplemental_immunization_activity sia
-group by 1,2,3,4,5,6,7
-)
-select 
- date,
  a1.label as admin1,
  a2.label as admin2,
  a3.label as admin3,
  a4.label as admin4,
  a5.label as admin5,
- a.vaccine_administered,
- a.total_vaccinated as total_vaccinated,
- t.campaign_target as campaign_target,
+ siat.campaign_start_date,
+ siat.campaign_end_date,
+ (siat.campaign_end_date - siat.campaign_start_date) as campaign_days,
+ siat.vaccine_label as vaccine_administered,
+ siattc.no_children as campaign_target,
+ siattc.age_group_label 
+from templates.supplemental_immunization_activity_target siat  
+left join templates.supplemental_immunization_activity_target_target_children siattc on siattc.parent_id=siat.id 
+left join csv.admin1 a1 on siat.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on siat.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on siat.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on siat.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on siat.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+);
+alter view staging.sia_targets owner to rt_vama;
+----This sub query creates the vaccine dose view
+create or replace view staging.sia_vaccine_dose as 
+(
+select 
+ sia.date_vaccination_activity,
+ a1.label as admin1,
+ a2.label as admin2,
+ a3.label as admin3,
+ a4.label as admin4,
+ a5.label as admin5,
+ sia.vaccine_label as vaccine_administered,
+ MAX(sia.vial_dosage) as vial_dosage,
+ SUM(sia.vials_used) as vials_used,
+ SUM(sia.vial_dosage::int*sia.vials_used) as vaccine_dose,
+ SUM(sia.vials_discarded) as vials_discarded 
+from templates.supplemental_immunization_activity sia
+left join csv.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join csv.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join csv.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join csv.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join csv.admin5 a5 on sia.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
+group by 1,2,3,4,5,6,7
+);
+
+alter view staging.sia_vaccine_dose owner to rt_vama;
+
+-----The query below creates an aggregate view of the actual vaccinated values, vaccine dose and target values
+create or replace view staging.aggregated_sia_actuals_target as
+(
+with 
+targets as 
+--Retrieves the campaign target from the sia_targets view
+-- The query gets the cumulative value of the campaign target without the age group breakdown 
+(
+select 
+ st.admin5,
+ st.vaccine_administered,
+ st.campaign_start_date,
+ st.campaign_end_date,
+ SUM(st.campaign_target) as campaign_target
+from staging.sia_targets st
+group by 1,2,3,4
+),
+actuals as 
+(
+select 
+sa.date_vaccination_activity,
+sa.admin1,
+sa.admin2,
+sa.admin3,
+sa.admin4,
+sa.admin5,
+sa.latitude::real,
+sa.longitude::real,
+sa.vaccine_administered,
+SUM(sa.indicator_value) filter (where sa.coverage_category in ('Deferred Vaccinated','Refused Vaccinated','Vaccinated')) as total_vaccinated
+from staging.sia_actuals sa
+group by 1,2,3,4,5,6,7,8,9
+)
+---Joins the target values to the actual values without gender, agegroup disaggregation
+select 
+ hcd.date,
+ sa.admin1,
+ sa.admin2,
+ sa.admin3,
+ sa.admin4,
+ sa.admin5,
+ sa.vaccine_administered,
+ sa.total_vaccinated,
+ tar.campaign_target,
  vd.vials_used,
  vd.vials_discarded,
  vd.vaccine_dose,
  vd.vial_dosage,
- a.latitude::real,
- a.longitude::real
+ sa.latitude::real,
+ sa.longitude::real
 from csv.hard_coded_dates hcd 
-left join actuals a on a.date_vaccination_activity=hcd.date
-left join targets t on a.vaccine_administered=t.vaccine_label and t.admin5=a.admin5 and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date 
-left join csv.admin1 a1 on a.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join csv.admin2 a2 on a.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
-left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
-left join vaccine_doses vd on vd.date_vaccination_activity=hcd.date and vd.vaccine_label=a.vaccine_administered and a.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
-where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
+left join actuals sa on sa.date_vaccination_activity=hcd.date
+left join targets tar on tar.vaccine_administered=sa.vaccine_administered and tar.admin5=sa.admin5 and sa.date_vaccination_activity between tar.campaign_start_date and tar.campaign_end_date 
+left join staging.sia_vaccine_dose vd on vd.date_vaccination_activity=hcd.date and vd.vaccine_administered=sa.vaccine_administered and sa.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
+where hcd.date<=now()::date and sa.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 alter view staging.aggregated_sia_actuals_target owner to rt_vama;
-
 
 ---This script creates a view that gets the actual and the target vaccination values from the SIA and SIA targets form 
 --- This view is useful when getting the no. of children who are remaining to be vaccinated, who have remained within the deferred and refused groups after some have been vaccinated
@@ -209,63 +229,39 @@ alter view staging.aggregated_sia_actuals_target owner to rt_vama;
        --- i. admin4 - this table contains all the admin4 level admin names and codes
        --- j. admin5 - this table contains all the admin5 level admin names and codes
 --- The following sections need to updated during customization:
-      --- a.The admin1, admin2, admin3, admin4 and admin5 files within the CSV schema need to be updated to match the administrative hierarchy of the respective country reporting_office adopting the tool
-      --- b. hard_coded_dates needs to be updated if the dates will have surpassed 25th August 2025
-      --- c. province_iso2_codes needs to be updated to match the country office iso2 codes
+      --- a. hard_coded_dates needs to be updated if the dates will have surpassed 25th August 2025
+      --- b. province_iso2_codes needs to be updated to match the country office iso2 codes
 create or replace view staging.sia_actuals_target as
 (
-with 
-targets as 
---Retrieves the campaign target from the targets form, then computes the daily target based on the number of days the campaign is supposed to take.
---The link to the targets form: https://inform.unicef.org/uniceftemplates/635/977 
-(
-select 
- siat.id,
- siat.admin0,
- siat.admin1,
- siat.admin2,
- siat.admin3,
- siat.admin4,
- siat.admin5,
- siat.campaign_start_date,
- siat.campaign_end_date,
- siat.vaccine_label,
- siattc.no_children as campaign_target,
- siattc.no_children / (siat.campaign_end_date - siat.campaign_start_date) as daily_target,
- siattc.age_group_label 
-from templates.supplemental_immunization_activity_target siat  
-left join templates.supplemental_immunization_activity_target_target_children siattc on siattc.parent_id=siat.id 
-),
-actuals as 
+with actuals as 
 ---Retrieves the actual values from the vaccination coverage group
 (
 select 
-  sia.date_vaccination_activity,
-  sia.admin1,
-  sia.admin2,
-  sia.admin3,
-  sia.admin4,
-  sia.admin5,
-  sia.vaccine_label as vaccine_administered,
-  SUM(siav.vaccinated_males + siav.vaccinated_females) as total_vaccinated,
-  SUM(siav.deferred_males + siav.deferred_females) as total_deferred,
-  SUM(siav.refused_males+ siav.refused_females) as total_refused,
-  SUM(siav.vaccinated_males_previously_deferred + siav.vaccinated_females_previously_deferred) as total_vaccinated_previously_deferred,
-  SUM(siav.vaccinated_males_previously_refused + siav.vaccinated_females_previously_refused) as total_vaccinated_previously_refused,
-  siav.age_group_label,
-  sia.admin4_lat as latitude,
-  sia.admin4_long as longitude
-from templates.supplemental_immunization_activity_vaccine siav 
-left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id
+  sa.date_vaccination_activity,
+  sa.admin1,
+  sa.admin2,
+  sa.admin3,
+  sa.admin4,
+  sa.admin5,
+  sa.vaccine_administered,
+  SUM(sa.indicator_value) filter (where sa.coverage_category in ('Vaccinated')) as total_vaccinated,
+  SUM(sa.indicator_value) filter (where sa.coverage_category in ('Deferred')) as total_deferred,
+  SUM(sa.indicator_value) filter (where sa.coverage_category in ('Refused')) as total_refused,
+  SUM(sa.indicator_value) filter (where sa.coverage_category in ('Deferred Vaccinated')) as total_vaccinated_previously_deferred,
+  SUM(sa.indicator_value) filter (where sa.coverage_category in ('Refused Vaccinated')) as total_vaccinated_previously_refused,
+  sa.age_group_label,
+  sa.latitude,
+  sa.longitude
+from staging.sia_actuals sa 
 group by 1,2,3,4,5,6,7,13,14,15
 )
 select 
  date,
- a1.label as admin1,
- a2.label as admin2,
- a3.label as admin3,
- a4.label as admin4,
- a5.label as admin5,
+ a.admin1,
+ a.admin2,
+ a.admin3,
+ a.admin4,
+ a.admin5,
  a.vaccine_administered,
  a.total_vaccinated,
  t.campaign_target,
@@ -276,16 +272,11 @@ select
  a.total_deferred,
  a.total_refused,
  a.total_vaccinated_previously_deferred,
- a. total_vaccinated_previously_refused
+ a.total_vaccinated_previously_refused
 from csv.hard_coded_dates hcd ----has dates listed from 1st December 2022 to 25th August 2025. This file enables one to have a correct way of mapping data across the different time periods
 left join actuals a on a.date_vaccination_activity=hcd.date
-left join targets t on a.vaccine_administered=t.vaccine_label and t.age_group_label=a.age_group_label and a.admin5=t.admin5 and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date  
-left join csv.admin1 a1 on a.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join csv.admin2 a2 on a.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join csv.admin3 a3 on a.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join csv.admin4 a4 on a.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
-left join csv.admin5 a5 on a.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
-left join csv.province_iso2_codes pic  on pic.admin2_id::text=a.admin2
+left join staging.sia_targets  t on a.vaccine_administered=t.vaccine_administered and t.age_group_label=a.age_group_label and a.admin5=t.admin5 and a.date_vaccination_activity between t.campaign_start_date and t.campaign_end_date  
+left join csv.province_iso2_codes pic  on pic.province_label=a.admin2
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 alter view staging.sia_actuals_target owner to rt_vama;
@@ -316,9 +307,13 @@ select
   a5.label as admin5,
   sia.vaccine_label as vaccine_administered,
   siav.age_group_label,
-  unnest(array['Reason 1','Reason 2','Reason 3','Reason 4','Reason 5','Reason 6', 'Reason 7','Reason 8','Reason 9', 'Reason 10','Reason 11','Reason 12','Other','Reason 1','Reason 2','Reason 3','Reason 4','Reason 5','Reason 6','Reason 7','Reason 8','Reason 9','Reason 10','Reason 11','Reason 12','Other']) as reason_category,
-  unnest(array[deferred_reason_1,deferred_reason_2,deferred_reason_3,deferred_reason_4,deferred_reason_5,deferred_reason_6,deferred_reason_7,deferred_reason_8,deferred_reason_9,deferred_reason_10,deferred_reason_11,deferred_reason_12,deferred_other,refused_reason_1,refused_reason_2,refused_reason_3,refused_reason_4,refused_reason_5,refused_reason_6,refused_reason_7,refused_reason_8,refused_reason_9,refused_reason_10,refused_reason_11,refused_reason_12,refused_other]) as reasons_value,
-  unnest(array['Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused']) as coverage_category
+  unnest(array['Reason 1','Reason 2','Reason 3','Reason 4','Reason 5','Reason 6', 'Reason 7','Reason 8','Reason 9', 'Reason 10','Reason 11','Reason 12','Other','Reason 1',
+  'Reason 2','Reason 3','Reason 4','Reason 5','Reason 6','Reason 7','Reason 8','Reason 9','Reason 10','Reason 11','Reason 12','Other']) as reason_category,
+  unnest(array[deferred_reason_1,deferred_reason_2,deferred_reason_3,deferred_reason_4,deferred_reason_5,deferred_reason_6,deferred_reason_7,deferred_reason_8,deferred_reason_9,
+  deferred_reason_10,deferred_reason_11,deferred_reason_12,deferred_other,refused_reason_1,refused_reason_2,refused_reason_3,refused_reason_4,refused_reason_5,refused_reason_6,
+  refused_reason_7,refused_reason_8,refused_reason_9,refused_reason_10,refused_reason_11,refused_reason_12,refused_other]) as reasons_value,
+  unnest(array['Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Deferred','Refused','Refused',
+  'Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused']) as coverage_category
 from templates.supplemental_immunization_activity_vaccine siav
 left join templates.supplemental_immunization_activity sia on siav.parent_id=sia.id  --- Adds the fields assosciated with the repeat group data
 left join csv.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column

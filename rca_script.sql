@@ -57,7 +57,7 @@ alter view staging.rca_labels owner to rt_vama;
                   -- e. admin4 - this table contains all the admin4 level admin names and codes
                   -- f. admin5 - this table contains all the admin5 level admin names and codes
                   -- g. spv_rapid_coverage_assessment_form_vaccination - the table that has the households information on the no. of present in the hh, no.of vaccinate/not vaccinated children
---- The following section(s) need to updated during customization:
+--- The following section(s) need to be updated during customization:
                   --- a.The admin1, admin2, admin3, admin4 and admin5 files within the CSV schema need to be updated to match the administrative hierarchy of the respective country office adopting the tool
                   --- b. province_iso2_codes needs to be updated to match the reporting country office iso2 codes
 create or replace view staging.rca_actuals as
