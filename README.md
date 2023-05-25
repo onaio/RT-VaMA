@@ -32,9 +32,11 @@ Each script works to create a set of final tables that can be connected to the B
 - Create intermediate table / views
 - Create final tables with logic for metrics
 
+For maximum simplicity, all final tables in the scripts are materialized as database views. For query performance optimization, we recommend materializing the objects either as tables or as materialized views and then refreshing them on a schedule. The availability of this strategy will depend on the DB administration permissions available at each country level. 
+
 In order to edit these scripts, a country office should: 
-1. Know the tables associated with each script.
-2. Select the relevant scripts.
+1. Know the tables associated with each script
+2. Select the relevant scripts
 3. Understand SQL
 
 Please note that, in order to execute the queries, you will need access to the form submissions, as well as the administrative areas tables and in some cases, the table with the listed dates and province iso codes.
