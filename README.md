@@ -27,8 +27,6 @@ retrieves the sources of information from the RCA form.
 
 5. synchronized_monitoring_tool_script. This script transforms data from the `Synchronized Vaccination Monitoring Tool` form. Within the script there are 3 SQL queries,one that unnests the form questions, one that calculates the monitoring score of the facility based on the question categories and one that retrieves the number of children who have been vaccinated and target values from the form.
 
- Please note that, in order to execute the queries, you will need access to the form submissions, as well as the administrative areas tables and in some cases, the table with the listed dates and province iso codes.
-
 Each script works to create a set of final tables that can be connected to the BI tool of choice (e.g. PowerBI, Superset). They achieve the objective according to the same logic:
 - Create labels if any
 - Create intermediate table / views
@@ -39,4 +37,7 @@ In order to edit these scripts, a country office should:
 2. Select the relevant scripts.
 3. Understand SQL
 
+Please note that, in order to execute the queries, you will need access to the form submissions, as well as the administrative areas tables and in some cases, the table with the listed dates and province iso codes.
+
 It is highly recommended to be careful while customizing the scripts so as to avoid the queries from not being executed successfully.
+
