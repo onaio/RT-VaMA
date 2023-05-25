@@ -37,6 +37,7 @@ In order to edit these scripts, a country office should:
 2. Select the relevant scripts.
 3. Understand SQL
 
+Please note that, in order to execute the queries, you will need access to the form submissions, as well as the administrative areas tables and in some cases, the table with the listed dates and province iso codes.
+
 It is highly recommended to be careful while customizing the scripts so as to avoid the queries from not being executed successfully.
 
-Please note that, in order to execute the queries, you will need access to the form submissions, as well as the administrative areas tables and in some cases, the table with the listed dates and province iso codes.
