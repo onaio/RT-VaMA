@@ -6,17 +6,16 @@
 
 ---Creates the templates schema to host the templates from Inform
 create schema if not exists templates;
-alter schema templates owner to rt_vama;
+
 
 ---Creates the CSV schema to host the location templates and any CSV file that is uploaded to the database 
 create schema if not exists csv;
-alter schema csv owner to rt_vama;
+
 
 
 ---Creates the schema that hosts the final views for visualization
 create schema if not exists reporting;
-alter schema reporting owner to rt_vama;
+
 
 ---Creates a staging schema that hosts the views that have labels from the registry table and views that can be joined to create a final view for visualization
 create schema if not exists staging;
-alter schema staging owner to rt_vama;

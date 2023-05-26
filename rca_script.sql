@@ -45,7 +45,6 @@ select
     unnest_2.language ->> 'und' AS label
 from unnest_2
 );
-alter view staging.rca_labels owner to rt_vama;
 
 ----Tidy table
 ---This query creates a tidy table of the RCA form actual values ie children present in the hh, vaccinated children and not vaccinated children
@@ -89,7 +88,6 @@ left join staging.rca_labels rl on rl.code=srcaf.vaccine_administered and rl.que
 left join csv.province_iso2_codes pic on pic.admin2_id::text=a2.name::text ---adds the admin 2 isocodes to be used for the country maps on superset
 );
 
-alter view staging.rca_actuals owner to rt_vama;
 
 ----This query creates a view that has the no.of doors visited, whether mop-up is needed and number of children not vaccinated in the doors visited
 --- To be able to perform a sum of the doors visited and no. of children not vaccinated within the visuals this view had to be created
@@ -136,7 +134,6 @@ left join staging.rca_actuals ra on srcaf.rca_date=ra.rca_date and rl.label=ra.v
 left join csv.province_iso2_codes pic on pic.admin2_id::text=a2.name::text ---adds the admin 2 isocodes to be used for the country maps on superset
 group by 1,2,3,4,5,6,7,8,9,10,11,12,13,15
 );
-alter view staging.rca owner to rt_vama;
 
 ----This query creates a view of the RCA sources of information
 ---For the query to execute successfully, the following tables are required:
@@ -178,7 +175,6 @@ select * from sources_info
 where no_doors is not null ---filters out rows with no responses
 );
 
-alter view staging.rca_sources_info owner to rt_vama;
 
 ----This query creates a view of the RCA reasons breakdown as to why the children have not been vaccinated 
 ---For the query to execute successfully, the following tables are required:
@@ -221,7 +217,6 @@ select * from reasons_breakdown
 where reasons_value is not null
 );
 
-alter view staging.rca_not_vaccinated_reasons owner to rt_vama;
 
 
 ------POWER BI VIEWS
@@ -230,7 +225,6 @@ create or replace view public.rca_actuals as
 (
 select * from staging.rca_actuals
 );
-alter view public.rca_actuals owner to rt_vama;
 
 
 create or replace view public.rca as 
@@ -256,18 +250,15 @@ select
     enumerator
 from staging.rca
 );
-alter view public.rca owner to rt_vama;
 
 
 create or replace view public.rca_sources_info as 
 (
 select * from staging.rca_sources_info
 );
-alter view public.rca_sources_info owner to rt_vama;
 
 
 create or replace view public.rca_not_vaccinated_reasons as 
 (
 select * from staging.rca_not_vaccinated_reasons
 );
-alter view public.rca_not_vaccinated_reasons owner to rt_vama;

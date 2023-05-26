@@ -46,7 +46,7 @@ select
     unnest_2.language ->> 'und' AS label
 from unnest_2
 );
-alter view staging.hcl_monitoring_assessment_labels owner to rt_vama;
+
 
 ---This view creates a tidy table of the Health Center Level Monitoring and Assessment of Readiness form
 --- This query was developed based on the indicators that were to be developed. 
@@ -100,7 +100,6 @@ unnest(array['Microplanning','Microplanning','Microplanning','Microplanning','Mi
 'Reporting System','Reporting System','Reporting System','Vaccine Management','Vaccine Management','Vaccine Management','Vaccine Management','Human Resource']) as indicators_category ----creates a column that has the category of the respective questions
 from templates.health_center_level_monitoring_and_assessment_of_readiness hcl ---the raw table from Inform
 );
-alter view staging.hc_assessment owner to rt_vama;
 
 
 create or replace view staging.hcl_monitoring_assessment as
@@ -156,7 +155,6 @@ left join csv.admin4 a4 on hcl.admin4=a4.name::text and ha.id=hcl.id ---Adds adm
 left join csv.admin5 a5 on hcl.admin5=a5.name::text and ha.id=hcl.id ---Adds admin 5 labels using the admin name column
 left join staging.hcl_monitoring_assessment_labels hcll on va.vaccine_administered=hcll.code and hcll.question='vaccine_administered'
 
-alter view staging.hcl_monitoring_assessment owner to rt_vama;
 
 
 ----This query creates a view that has the facilities proportions based on the responses provided to the questions during the assessment
@@ -213,7 +211,6 @@ end as category_label
 from yes_responses yrp
 group by 1,2,3,4,5,6,7
 );
-alter view staging.ready_facilities owner to rt_vama;
 
 
 ------POWER BI VIEWS
@@ -242,11 +239,10 @@ select
      enumerator
 from staging.hcl_monitoring_assessment
 );
-alter view public.hcl_monitoring_assessment owner to rt_vama;
 
 ----Ready facilities
 create or replace view public.ready_facilities as 
 (
 select * from staging.ready_facilities
 );
-alter view public.ready_facilities owner to rt_vama;
+

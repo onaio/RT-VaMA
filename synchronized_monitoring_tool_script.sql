@@ -73,7 +73,7 @@ select
   'Vaccine management'])as indicators_category
 from templates.synchronized_vaccination_monitoring_tool svmt
 );
-alter view staging.microplan_vaccine_management owner to rt_vama;
+
 
 ----The sub query below creates a view that has the vaccination site questions
 create or replace view staging.vaccination_site_questions_monitoring_tool as 
@@ -95,7 +95,7 @@ select
   'At Vaccination site','At Vaccination site','At Vaccination site'])as indicators_category
 from templates.synchronized_vaccination_monitoring_tool_vaccination_team_info svmtvti  
 );
-alter view staging.vaccination_site_questions_monitoring_tool owner to rt_vama;
+
 
 
 create or replace view staging.monitoring_tool as
@@ -131,7 +131,7 @@ left join csv.admin4 a4 on svmt.admin4=a4.name::text ---Adds admin 4 labels usin
 left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 where a5.label is not null
 );
-alter view staging.monitoring_tool owner to rt_vama;
+
 
 -----Synchronized Vaccination Monitoring Tool
 ---This view assigns proportions to reporting facilities based on the category performance
@@ -193,9 +193,6 @@ from yes_responded_questions yrq
 group by 1,2,3,4,5,6,7,8,9,10
 );
 
-alter view staging.monitored_facilities_overall_proportion owner to rt_vama;
-
-
 ----This query creates a view of the vaccinated children in the monitoring tool
 ---For the query to execute successfully, the following tables are required:
                   -- a. synchronized_vaccination_monitoring_tool - this is the table that has all the responses from the Synchronized Vaccination Monitoring Tool form on Inform
@@ -236,7 +233,7 @@ left join csv.admin5 a5 on svmt.admin5=a5.name::text ---Adds admin 5 labels usin
 left join csv.province_iso2_codes pic on pic.admin2_id::text=a2.name::text ---
 );
 
-alter view staging.vaccinated_children_under_monitoring_tool owner to rt_vama;
+
 
 ------POWER BI VIEWS
 ---The PowerBI connector currently pulls data from views within the public schema. Hence the repointing to the public schema
@@ -244,14 +241,14 @@ create or replace view public.monitoring_tool as
 (
 select * from staging.monitoring_tool mt 
 );
-alter view public.monitoring_tool owner to rt_vama;
+
 
 ----Monitored facilities overall proportion
 create or replace view public.monitored_facilities_overall_proportion as 
 (
 select * from staging.monitored_facilities_overall_proportion
 );
-alter view public.monitored_facilities_overall_proportion owner to rt_vama;
+
 
 -----Vaccinated children under the monitoing tool
 create or replace view public.vaccinated_children_under_monitoring_tool as 
@@ -275,4 +272,4 @@ select
     enumerator
 from staging.vaccinated_children_under_monitoring_tool vcumt 
 );
-alter view public.vaccinated_children_under_monitoring_tool owner to rt_vama;
+

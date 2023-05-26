@@ -49,7 +49,6 @@ select
     unnest_2.language ->> 'und' AS label
 from unnest_2
 );
-alter view staging.sia_labels owner to rt_vama;
 
 
 ---- SIA Actuals
@@ -90,7 +89,6 @@ left join csv.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using
 left join csv.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 );
-alter view staging.sia_actuals owner to rt_vama;
 
 
 ---This script creates a view that aggregates the actual values to admin 4 level so that the actuals can be matched to the target values
@@ -130,7 +128,7 @@ left join csv.admin3 a3 on siat.admin3=a3.name::text ---Adds admin 3 labels usin
 left join csv.admin4 a4 on siat.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on siat.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 );
-alter view staging.sia_targets owner to rt_vama;
+
 ----This sub query creates the vaccine dose view
 create or replace view staging.sia_vaccine_dose as 
 (
@@ -155,7 +153,6 @@ left join csv.admin5 a5 on sia.admin5=a5.name::text ----Adds admin 5 labels usin
 group by 1,2,3,4,5,6,7
 );
 
-alter view staging.sia_vaccine_dose owner to rt_vama;
 
 -----The query below creates an aggregate view of the actual vaccinated values, vaccine dose and target values
 create or replace view staging.aggregated_sia_actuals_target as
@@ -213,7 +210,6 @@ left join targets tar on tar.vaccine_administered=sa.vaccine_administered and ta
 left join staging.sia_vaccine_dose vd on vd.date_vaccination_activity=hcd.date and vd.vaccine_administered=sa.vaccine_administered and sa.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
 where hcd.date<=now()::date and sa.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
-alter view staging.aggregated_sia_actuals_target owner to rt_vama;
 
 ---This script creates a view that gets the actual and the target vaccination values from the SIA and SIA targets form 
 --- This view is useful when getting the no. of children who are remaining to be vaccinated, who have remained within the deferred and refused groups after some have been vaccinated
@@ -279,8 +275,6 @@ left join staging.sia_targets  t on a.vaccine_administered=t.vaccine_administere
 left join csv.province_iso2_codes pic  on pic.province_label=a.admin2
 where hcd.date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
-alter view staging.sia_actuals_target owner to rt_vama;
-
 
 
 ----This query creates a view for the SIA reasons breakdown
@@ -326,8 +320,6 @@ select * from deferred_refused_reasons
 where reasons_value is not null
 );
 
-alter view staging.deferred_refused_reasons owner to rt_vama;
-
 
 ----SIA Records
 ---This query creates a view that can be used to show the submitted records table
@@ -360,7 +352,6 @@ left join csv.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using
 left join csv.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 );
-alter view staging.sia_records owner to rt_vama;
 
 
 ------POWER BI VIEWS
@@ -371,29 +362,24 @@ create or replace view public.sia_actuals as
 (
 select * from staging.sia_actuals
 );
-alter view public.sia_actuals owner to rt_vama;
 
 ---SIA Aggregated values 
 create or replace view public.aggregated_sia_actuals_target as 
 (
 select * from staging.aggregated_sia_actuals_target
 );
-alter view public.aggregated_sia_actuals_target owner to rt_vama;
 
 ---SIA Actuals, Target
 create or replace view public.sia_actuals_targets as
 (
 select * from staging.sia_actuals_target sat 
 );
-alter view public.sia_actuals_targets owner to rt_vama;
-
 
 ----SIA reasons breakdown
 create or replace view public.sia_deferred_refused_reasons as 
 (
 select * from staging.deferred_refused_reasons drr 
 );
-alter view public.sia_deferred_refused_reasons owner to rt_vama;
 
 ----SIA Records
 create or replace view public.sia_records as 
@@ -412,4 +398,3 @@ select
      enumerator
 from staging.sia_records
 );
-alter view public.sia_records owner to rt_vama;

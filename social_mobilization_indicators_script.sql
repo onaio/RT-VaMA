@@ -80,8 +80,6 @@ left join templates.spv_social_mobilization_indicators_refusals ssmir on ssmir.p
 left join csv.province_iso2_codes pic on pic.admin2_id=a2.name
 );
 
-alter view staging.social_mobilization_indicators owner to rt_vama;
-
 
 
 -----POWER BI VIEWS
@@ -105,4 +103,3 @@ select
     enumerator
 from staging.social_mobilization_indicators
 );
-alter view public.social_mobilization_indicators owner to rt_vama;
