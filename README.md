@@ -14,7 +14,7 @@ The form templates include:
 
 The objective of these data transformation scripts is to extract the data from these forms and create tables that can be used for reporting. Given the independence of the various forms, the toolkit is subdivided into 6 scripts, so that only the relevant scripts are required based on forms adopted by the campaign. 
 
-The data transformation scripts include: 
+The data transformation and schemas scripts include: 
 
 1. schemas_script. This script creates the relevant schemas where the views created by the queries within (hcl_readiness_script,sia_script,rca_script,social_mobilization_indicators_script,synchronized_monitoring_tool_script) will be located, where the raw tables from Inform will be located and where the uploaded CSV files will be located. You need to run the queries within this script **FIRST** so as to be able to upload the administrative areas files to the database under the CSV schema and be able to successfully execute the queries within (hcl_readiness_script,sia_script,rca_script,social_mobilization_indicators_script,synchronized_monitoring_tool_script).
 2. hcl_readiness_script. This script transforms data from the `Health Center Level Monitoring and Assessment of Readiness` form. Within this script there are 2 SQL queries, one that unnests the forms questions and another one that calculates the readiness score based on the question categories that are available.
