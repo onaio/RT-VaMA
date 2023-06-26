@@ -127,7 +127,7 @@ from templates.health_center_level_monitoring_and_assessment_of_readiness hcl
 select
 ha.id,
 la.latest_assessment as assessment_date,
-hcll.label as vaccine_label,
+null as vaccine_label,
 a1.label as admin1,
 a2.label as admin2,
 a3.label as admin3,
@@ -145,7 +145,7 @@ hcl.modified_at,
 hcl.enumerator 
 from staging.hc_assessment ha
 left join latest_assessment_id la on ha.id = la.id
-left join vaccine_administered va on ha.id=va.id
+---left join vaccine_administered va on ha.id=va.id
 left join csv.hc_assessment_questions_per_category haqpc on ha.indicators_category=haqpc.indicators_category ----The hc_assessment_questions_per_category table has the list of categories with no.of questions per category
 left join templates.health_center_level_monitoring_and_assessment_of_readiness hcl on ha.id=hcl.id 
 left join csv.admin1 a1 on hcl.admin1=a1.name::text and ha.id=hcl.id---Adds admin 1 labels using the admin name column
@@ -153,7 +153,7 @@ left join csv.admin2 a2 on hcl.admin2=a2.name::text and ha.id=hcl.id ---Adds adm
 left join csv.admin3 a3 on hcl.admin3=a3.name::text and ha.id=hcl.id ---Adds admin 3 labels using the admin name column
 left join csv.admin4 a4 on hcl.admin4=a4.name::text and ha.id=hcl.id ---Adds admin 4 labels using the admin name column
 left join csv.admin5 a5 on hcl.admin5=a5.name::text and ha.id=hcl.id ---Adds admin 5 labels using the admin name column
-left join staging.hcl_monitoring_assessment_labels hcll on va.vaccine_administered=hcll.code and hcll.question='vaccine_administered'
+----left join staging.hcl_monitoring_assessment_labels hcll on va.vaccine_administered=hcll.code and hcll.question='vaccine_administered'
 
 
 
