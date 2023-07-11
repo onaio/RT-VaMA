@@ -164,7 +164,7 @@ from data d
                   -- d. admin3 - this table contains all the admin3 level admin names and codes
                   -- e. admin4 - this table contains all the admin4 level admin names and codes
                   -- f. admin5 - this table contains all the admin5 level admin names and codes
-                  -- g. hc_assessment_questions_per_category - contains the no. of questions for each category
+                  -- g. hc_assessment_qns_category - contains the no. of questions for each category
 --- The following sections need to updated during customization:
            --a. Indicators_label unnest section: the set on questions need to be updated based on how they have been labelled within the customized Health Center Level Monitoring and Assessment of Readiness form
            --b. The admin1, admin2, admin3, admin4 and admin5 files within the airbyte schema need to be updated to match the administrative hierarchy of the respective country reporting_office adopting the tool
@@ -270,7 +270,7 @@ left join airbyte.admin5 a5 on hcl.admin5=a5.name::text and ha.id::varchar=hcl.i
                   -- d. admin3 - this table contains all the admin3 level admin names and codes
                   -- e. admin4 - this table contains all the admin4 level admin names and codes
                   -- f. admin5 - this table contains all the admin5 level admin names and codes
-                  -- g. hc_assessment_questions_per_category - contains the no. of questions for each category
+                  -- g. hc_assessment_qns_category - contains the no. of questions for each category
 create or replace view staging.ready_facilities as 
 (
 with hcl_questions as 
