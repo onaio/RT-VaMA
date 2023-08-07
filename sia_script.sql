@@ -390,7 +390,7 @@ group by 1,2,3,4,5,6,7,8,9
 )
 ---Joins the target values to the actual values without gender, agegroup disaggregation
 select 
- hcd.date,
+ hcd.date::date,
  sa.admin1,
  sa.admin2,
  sa.admin3,
@@ -453,7 +453,7 @@ from staging.sia_actuals sa
 group by 1,2,3,4,5,6,7,13,14,15
 )
 select 
- date,
+ date::date,
  a.admin1,
  a.admin2,
  a.admin3,
