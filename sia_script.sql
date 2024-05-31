@@ -95,7 +95,7 @@ from data
 );
 
 ---This query creates the supplemental_immunization_activity_vaccine table which is the repeat group data
----S.M (31.05.24) Airbyte relevant columns not coming in anymore
+---S.M (31.05.24) Some Airbyte relevant columns are not included in this version
 create or replace view airbyte_removed_group.supplemental_immunization_activity_vaccine as
 (
 with data as
