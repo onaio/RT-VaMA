@@ -95,7 +95,7 @@ from data
 );
 
 ---This query creates the supplemental_immunization_activity_vaccine table which is the repeat group data
-
+---S.M (31.05.24) Airbyte relevant columns not coming in anymore
 create or replace view airbyte_removed_group.supplemental_immunization_activity_vaccine as
 (
 with data as
@@ -150,8 +150,8 @@ jsonb_array_elements(immunization_coverage_vaccine) ->> 'immunization_coverage/v
 jsonb_array_elements(immunization_coverage_vaccine) -> 'immunization_coverage/vaccine/deferred/deferred_reason_10' as deferred_reason_10,
 jsonb_array_elements(immunization_coverage_vaccine) -> 'immunization_coverage/vaccine/coverage/vaccinated_females_previously_refused' as vaccinated_females_previously_refused,
 jsonb_array_elements(immunization_coverage_vaccine) -> 'immunization_coverage/vaccine/refused/refused_males' as refused_males,
-jsonb_array_elements(immunization_coverage_vaccine) ->> 'immunization_coverage/vaccine/age_group_label' as age_group_label
---"_airbyte_ab_id"::varchar as "_airbyte_ab_id",
+jsonb_array_elements(immunization_coverage_vaccine) ->> 'immunization_coverage/vaccine/age_group_label' as age_group_label,
+"_airbyte_raw_id"::varchar as "_airbyte_ab_id"
 --"_airbyte_emitted_at"::varchar as "_airbyte_emitted_at",
 --"_airbyte_normalized_at"::varchar as "_airbyte_normalized_at",
 --"_airbyte_immunizatio__verage_vaccine_hashid"::varchar as "_airbyte_immunizatio__verage_vaccine_hashid"
@@ -170,56 +170,56 @@ with data as
 select
 "_xform_id_string"::varchar as "_xform_id_string",
 "_review_comment"::varchar as "_review_comment",
-"geographic_location/admin4_lat"::varchar as admin4_lat,
+"geographic_location_admin4_lat"::varchar as admin4_lat,
 "_tags"::varchar as "_tags",
 "_review_status"::varchar as "_review_status",
 "_xform_id"::varchar as "_xform_id",
 "_total_media"::varchar as "_total_media",
-"immunization_coverage/vaccine_label"::varchar as vaccine_label,
+"immunization_coverage_vaccine_label"::varchar as vaccine_label,
 "_attachments"::varchar as "_attachments",
 "intro"::varchar as "intro",
 "today"::varchar as "today",
 "_submission_time"::varchar as submitted_at,
-"immunization_campaig__ils/campaign_end_date"::varchar as campaign_end_date,
+"immunization_campaign_details_campaign_end_date"::varchar as campaign_end_date,
 "end"::varchar as "end",
 "_duration"::varchar as "_duration",
 "_notes"::varchar as "_notes",
 "_version"::varchar as "_version",
-"formhub/uuid"::varchar as uuid,
-"immunization_coverage/vaccine_administered"::varchar as vaccine_administered,
+"formhub_uuid"::varchar as uuid,
+"immunization_coverage_vaccine_administered"::varchar as vaccine_administered,
 "_date_modified"::varchar as modified_at,
-"geographic_location/admin0"::varchar as admin0,
-"vaccine_logistics/vaccines_received"::varchar as vaccines_received,
+"geographic_location_admin0"::varchar as admin0,
+"vaccine_logistics_vaccines_received"::varchar as vaccines_received,
 "_geolocation"::varchar as "_geolocation",
 "device_id"::varchar as "device_id",
-"geographic_location/admin4"::varchar as admin4,
-"geographic_location/admin3"::varchar as admin3,
-"meta/instanceID"::varchar as instanceID,
-"geographic_location/admin2"::varchar as admin2,
-"geographic_location/admin1"::varchar as admin1,
+"geographic_location_admin4"::varchar as admin4,
+"geographic_location_admin3"::varchar as admin3,
+"meta_instanceID"::varchar as instanceID,
+"geographic_location_admin2"::varchar as admin2,
+"geographic_location_admin1"::varchar as admin1,
 "start"::varchar as "start",
 "_media_count"::varchar as "_media_count",
 "_uuid"::varchar as "_uuid",
 "_submitted_by"::varchar as "_submitted_by",
-"geographic_location/admin5"::varchar as admin5,
+"geographic_location_admin5"::varchar as admin5,
 "_status"::varchar as "_status",
-"immunization_campaig__etails/campaign_round"::varchar as campaign_round,
-"immunization_coverage/age_group"::varchar as age_group,
-"immunization_campaig__s/campaign_start_date"::varchar as campaign_start_date,
+"immunization_campaign_details_campaign_round"::varchar as campaign_round,
+"immunization_coverage_age_group"::varchar as age_group,
+"immunization_campaign_details_campaign_start_date"::varchar as campaign_start_date,
 "_media_all_received"::varchar as "_media_all_received",
-"geographic_location/admin4_long"::varchar as admin4_long,
+"geographic_location_admin4_long"::varchar as admin4_long,
 "_bamboo_dataset_id"::varchar as "_bamboo_dataset_id",
 "_edited"::varchar as "_edited",
-"immunization_campaig__ails/reporting_office"::varchar as reporting_office,
-"immunization_coverage/target_children_count"::varchar as target_children_count,
+"immunization_campaign_details_reporting_office"::varchar as reporting_office,
+"immunization_coverage_target_children_count"::varchar as target_children_count,
 "_id"::varchar as "id",
-"immunization_coverage/target_children"::varchar as target_children,
+"immunization_coverage_target_children"::varchar as target_children,
 "username"::varchar as "username",
-"_airbyte_ab_id"::varchar as "_airbyte_ab_id",
-"_airbyte_emitted_at"::varchar as "_airbyte_emitted_at",
-"_airbyte_normalized_at"::varchar as "_airbyte_normalized_at",
-"_airbyte_sbm_supplem__ctivity_target_hashid"::varchar as "_airbyte_sbm_supplem__ctivity_target_hashid"
-from airbyte."sbm_supplemental_imm__ation_activity_target"
+"_airbyte_raw_id"::varchar as "_airbyte_ab_id"
+--"_airbyte_emitted_at"::varchar as "_airbyte_emitted_at",
+--"_airbyte_normalized_at"::varchar as "_airbyte_normalized_at",
+--"_airbyte_sbm_supplem__ctivity_target_hashid"::varchar as "_airbyte_sbm_supplem__ctivity_target_hashid"
+from airbyte_v2."sbm_supplemental_immunization_activity_target"
 )
 select
 *
@@ -232,16 +232,16 @@ create or replace view airbyte_removed_group.supplemental_immunization_activity_
 with data as
 (
 select
-"_airbyte_sbm_supplem__ctivity_target_hashid"::varchar as  "_airbyte_sbm_target_hashid",
-"immunization_coverag___children/no_children"::int as no_children,
-"immunization_coverage/target_children/pos"::int as pos,
-"immunization_coverag__ldren/age_group_label"::varchar as age_group_label,
-"immunization_coverag__ildren/age_group_name"::varchar as age_group_name,
-"_airbyte_ab_id"::varchar as "_airbyte_ab_id",
-"_airbyte_emitted_at"::varchar as "_airbyte_emitted_at",
-"_airbyte_normalized_at"::varchar as "_airbyte_normalized_at",
-"_airbyte_immunizatio__arget_children_hashid"::varchar as "_airbyte_immunization_target_children_hashid"
-from airbyte."sbm_supplemental_imm__erage_target_children"
+--"_airbyte_sbm_supplem__ctivity_target_hashid"::varchar as  "_airbyte_sbm_target_hashid",
+jsonb_array_elements(immunization_coverage_target_children) -> 'immunization_coverage/target_children/no_children' as no_children,
+jsonb_array_elements(immunization_coverage_target_children) ->> 'immunization_coverage/target_children/pos' as pos,
+jsonb_array_elements(immunization_coverage_target_children) ->> 'immunization_coverage/target_children/age_group_label' as age_group_label,
+jsonb_array_elements(immunization_coverage_target_children) ->> 'immunization_coverage/target_children/age_group_name' as age_group_name,
+"_airbyte_raw_id"::varchar as "_airbyte_ab_id"
+--"_airbyte_emitted_at"::varchar as "_airbyte_emitted_at",
+--"_airbyte_normalized_at"::varchar as "_airbyte_normalized_at",
+--"_airbyte_immunizatio__arget_children_hashid"::varchar as "_airbyte_immunization_target_children_hashid"
+from airbyte_v2."sbm_supplemental_immunization_activity_target"
 )
 select
 *
@@ -284,11 +284,11 @@ select
   vaccinated_males_previously_refused,vaccinated_females_previously_refused,deferred_males,deferred_females,refused_males,refused_females]))::bigint as indicator_value
 from airbyte_removed_group.supplemental_immunization_activity_vaccine siav 
 left join airbyte_removed_group.supplemental_immunization_activity sia on siav._airbyte_ab_id=sia._airbyte_ab_id  --- Adds the fields assosciated with the repeat group data
-left join airbyte.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join airbyte.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join airbyte.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join airbyte.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
-left join airbyte.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join airbyte_v2.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join airbyte_v2.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join airbyte_v2.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join airbyte_v2.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join airbyte_v2.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 );
 
 
@@ -323,11 +323,11 @@ select
  siattc.age_group_label::text 
 from airbyte_removed_group.supplemental_immunization_activity_target siat  
 left join airbyte_removed_group.supplemental_immunization_activity_target_target_children siattc on siattc._airbyte_ab_id=siat._airbyte_ab_id
-left join airbyte.admin1 a1 on siat.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join airbyte.admin2 a2 on siat.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join airbyte.admin3 a3 on siat.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join airbyte.admin4 a4 on siat.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
-left join airbyte.admin5 a5 on siat.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join airbyte_v2.admin1 a1 on siat.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join airbyte_v2.admin2 a2 on siat.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join airbyte_v2.admin3 a3 on siat.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join airbyte_v2.admin4 a4 on siat.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join airbyte_v2.admin5 a5 on siat.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 );
 
 ----This sub query creates the vaccine dose view
@@ -346,11 +346,11 @@ select
  SUM(sia.vial_dosage::int*sia.vials_used)::numeric as vaccine_dose,
  SUM(sia.vials_discarded)::numeric as vials_discarded 
 from airbyte_removed_group.supplemental_immunization_activity sia
-left join airbyte.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join airbyte.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join airbyte.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join airbyte.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
-left join airbyte.admin5 a5 on sia.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
+left join airbyte_v2.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join airbyte_v2.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join airbyte_v2.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join airbyte_v2.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join airbyte_v2.admin5 a5 on sia.admin5=a5.name::text ----Adds admin 5 labels using the admin name column
 group by 1,2,3,4,5,6,7
 );
 
@@ -405,7 +405,7 @@ select
  vd.vial_dosage,
  sa.latitude::real,
  sa.longitude::real
-from airbyte.hard_coded_dates hcd 
+from airbyte_v2.hard_coded_dates hcd 
 left join actuals sa on sa.date_vaccination_activity=hcd.date::date
 left join targets tar on tar.vaccine_administered=sa.vaccine_administered and tar.admin5=sa.admin5 and sa.date_vaccination_activity between tar.campaign_start_date and tar.campaign_end_date 
 left join staging.sia_vaccine_dose vd on vd.date_vaccination_activity=hcd.date::date and vd.vaccine_administered=sa.vaccine_administered and sa.admin5=vd.admin5 --matches the value at reporting date, vaccine and admin5 level
@@ -470,10 +470,10 @@ select
  a.total_refused,
  a.total_vaccinated_previously_deferred,
  a.total_vaccinated_previously_refused
-from airbyte.hard_coded_dates hcd ----has dates listed from 1st December 2022 to 25th August 2025. This file enables one to have a correct way of mapping data across the different time periods
+from airbyte_v2.hard_coded_dates hcd ----has dates listed from 1st December 2022 to 25th August 2025. This file enables one to have a correct way of mapping data across the different time periods
 left join actuals a on a.date_vaccination_activity=hcd.date::date
 left join staging.sia_targets  t on a.vaccine_administered=t.vaccine_administered and t.age_group_label=a.age_group_label and a.admin5=t.admin5 and a.date_vaccination_activity between t.campaign_start_date::date and t.campaign_end_date::date  
-left join airbyte.province_iso2_codes pic  on pic.province_label=a.admin2
+left join airbyte_v2.province_iso2_codes pic  on pic.province_label=a.admin2
 where hcd.date::date<=now()::date and a.date_vaccination_activity is not null ----Filters dates that are not within the actuals form
 );
 
@@ -511,11 +511,11 @@ select
   'Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused','Refused']) as coverage_category
 from airbyte_removed_group.supplemental_immunization_activity_vaccine siav
 left join airbyte_removed_group.supplemental_immunization_activity sia on siav._airbyte_ab_id=sia._airbyte_ab_id  --- Adds the fields assosciated with the repeat group data
-left join airbyte.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join airbyte.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join airbyte.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join airbyte.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
-left join airbyte.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join airbyte_v2.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join airbyte_v2.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join airbyte_v2.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join airbyte_v2.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join airbyte_v2.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 )
 select * from deferred_refused_reasons
 where reasons_value is not null
@@ -547,11 +547,11 @@ select
   sia.modified_at,
   sia.enumerator::text 
 from airbyte_removed_group.supplemental_immunization_activity sia 
-left join airbyte.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join airbyte.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join airbyte.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join airbyte.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
-left join airbyte.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
+left join airbyte_v2.admin1 a1 on sia.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join airbyte_v2.admin2 a2 on sia.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join airbyte_v2.admin3 a3 on sia.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join airbyte_v2.admin4 a4 on sia.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join airbyte_v2.admin5 a5 on sia.admin5=a5.name::text ---Adds admin 5 labels using the admin name column
 );
 
 
