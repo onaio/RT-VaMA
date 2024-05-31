@@ -22,62 +22,62 @@ create or replace view airbyte_removed_group.spv_social_mobilization_indicators 
 with data as
 (
 select"_xform_id_string"::varchar as  "_xform_id_string",
-"soc_mob_indicators/learning_sessions"::varchar as  learning_sessions,
-"soc_mob_indicators/religious_institutions"::varchar as  religious_institutions,
-"remarks_grp/end_note"::varchar as  end_note,
-"assessment_details/enumerator"::varchar as  enumerator,
+"soc_mob_indicators_learning_sessions"::varchar as  learning_sessions,
+"soc_mob_indicators_religious_institutions"::varchar as  religious_institutions,
+"remarks_grp_end_note"::varchar as  end_note,
+"assessment_details_enumerator"::varchar as  enumerator,
 "_review_comment"::varchar as  "_review_comment",
 "_tags"::varchar as  "_tags",
 "_review_status"::varchar as  "_review_status",
-"soc_mob_indicators/vaccination_campaign"::varchar as  vaccination_campaign,
-"soc_mob_indicators/hhs_visited"::varchar as  hhs_visited,
+"soc_mob_indicators_vaccination_campaign"::varchar as  vaccination_campaign,
+"soc_mob_indicators_hhs_visited"::varchar as  hhs_visited,
 "_attachments"::varchar as  "_attachments",
 "intro"::varchar as  "intro",
 "_submission_time"::timestamp as  submitted_at,
-"geographical_location/admin4"::varchar as  admin4,
-"geographical_location/admin3"::varchar as  admin3,
-"geographical_location/admin2"::varchar as  admin2,
+"geographical_location_admin4"::varchar as  admin4,
+"geographical_location_admin3"::varchar as  admin3,
+"geographical_location_admin2"::varchar as  admin2,
 "_notes"::varchar as  "_notes",
 "_version"::varchar as  "_version",
 "_date_modified"::timestamp as modified_at,
 "_geolocation"::varchar as  "_geolocation",
 "device_id"::varchar as  "device_id",
-"geographical_location/admin4_long"::varchar as  admin4_long,
+"geographical_location_admin4_long"::varchar as  admin4_long,
 "_status"::varchar as  "_status",
 "_media_all_received"::varchar as  "_media_all_received",
-"soc_mob_indicators/advocacy_meetings"::varchar as  advocacy_meetings,
+"soc_mob_indicators_advocacy_meetings"::varchar as  advocacy_meetings,
 "_bamboo_dataset_id"::varchar as  "_bamboo_dataset_id",
 "_edited"::varchar as  "_edited",
-"remarks_grp/remarks"::varchar as  remarks,
+"remarks_grp_remarks"::varchar as  remarks,
 "_id"::varchar as  id,
-"soc_mob_indicators/rumors_misinformation"::varchar as  rumors_misinformation,
-"soc_mob_indicators/vaccination_team"::varchar as  vaccination_team,
-"soc_mob_indicators/social_mobilisers"::varchar as  social_mobilisers,
+"soc_mob_indicators_rumors_misinformation"::varchar as  rumors_misinformation,
+"soc_mob_indicators_vaccination_team"::varchar as  vaccination_team,
+"soc_mob_indicators_social_mobilisers"::varchar as  social_mobilisers,
 "_xform_id"::varchar as  "_xform_id",
 "_total_media"::varchar as  "_total_media",
-"soc_mob_indicators/posters_banners"::varchar as  posters_banners,
-"soc_mob_indicators/refusals"::varchar as  refusals,
+"soc_mob_indicators_posters_banners"::varchar as  posters_banners,
+"soc_mob_indicators_refusals"::varchar as  refusals,
 "today"::varchar as  "today",
 "end"::varchar as  "end",
 "_duration"::varchar as  "_duration",
-"formhub/uuid"::varchar as  uuid,
-"soc_mob_indicators/refusals_count"::varchar as  refusals_count,
-"geographical_location/admin1"::varchar as  admin1,
-"geographical_location/admin0"::varchar as  admin0,
-"meta/instanceID"::varchar as  instanceID,
-"remarks_grp/endnote2"::varchar as  endnote2,
-"soc_mob_indicators/vaccine_administered"::varchar as  vaccine_administered,
+"formhub_uuid"::varchar as  uuid,
+"soc_mob_indicators_refusals_count"::varchar as  refusals_count,
+"geographical_location_admin1"::varchar as  admin1,
+"geographical_location_admin0"::varchar as  admin0,
+"meta_instanceID"::varchar as  instanceID,
+"remarks_grp_endnote2"::varchar as  endnote2,
+"soc_mob_indicators_vaccine_administered"::varchar as  vaccine_administered,
 "start"::varchar as  "start",
 "_media_count"::varchar as  "_media_count",
-"assessment_details/conducted_by_other"::varchar as  conducted_by_other,
+"assessment_details_conducted_by_other"::varchar as  conducted_by_other,
 "_uuid"::varchar as  "_uuid",
 "_submitted_by"::varchar as  "_submitted_by",
-"geographical_location/admin4_lat"::varchar as  admin4_lat,
-"assessment_details/conducted_by"::varchar as  conducted_by,
-"soc_mob_indicators/vaccine_related"::varchar as  vaccine_related,
-"assessment_details/assessment_date"::varchar as  assessment_date,
+"geographical_location_admin4_lat"::varchar as  admin4_lat,
+"assessment_details_conducted_by"::varchar as  conducted_by,
+"soc_mob_indicators_vaccine_related"::varchar as  vaccine_related,
+"assessment_details_assessment_date"::varchar as  assessment_date,
 "username"::varchar as  "username"
-from airbyte.sbm_spv_social_mobilization_indicators
+from airbyte_v2.sbm_spv_social_mobilization_indicators
 )
 select
 *
@@ -157,12 +157,12 @@ select
   ssmi.enumerator::text 
 from combined_indicators c  
 left join airbyte_removed_group.spv_social_mobilization_indicators ssmi on c.id=ssmi.id
-left join airbyte.admin1 a1 on ssmi.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
-left join airbyte.admin2 a2 on ssmi.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
-left join airbyte.admin3 a3 on ssmi.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
-left join airbyte.admin4 a4 on ssmi.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
+left join airbyte_v2.admin1 a1 on ssmi.admin1=a1.name::text ---Adds admin 1 labels using the admin name column
+left join airbyte_v2.admin2 a2 on ssmi.admin2=a2.name::text ---Adds admin 2 labels using the admin name column
+left join airbyte_v2.admin3 a3 on ssmi.admin3=a3.name::text ---Adds admin 3 labels using the admin name column
+left join airbyte_v2.admin4 a4 on ssmi.admin4=a4.name::text ---Adds admin 4 labels using the admin name column
 left join airbyte_removed_group.spv_social_mobilization_indicators_refusals ssmir on ssmir.id=c.id
-left join airbyte.province_iso2_codes pic on pic.admin2_id=a2.name
+left join airbyte_v2.province_iso2_codes pic on pic.admin2_id=a2.name
 );
 
 
